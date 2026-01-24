@@ -1,53 +1,35 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import reactLogo from "../assets/react.svg";
 import { trpc } from "../trpc";
+import { CreateProjectInput } from "./-components/create-project-input";
+import { ProjectCard } from "./-components/project-card";
 
 export const Route = createFileRoute("/")({
-	component: HomeComponent,
+	component: HomePage,
 });
 
-function HomeComponent() {
-	const [name, setName] = useState("");
-	const [submittedName, setSubmittedName] = useState("");
-
-	const greetQuery = trpc.greet.useQuery(
-		{ name: submittedName },
-		{ enabled: submittedName.length > 0 },
-	);
-
-	function handleSubmit(e: React.FormEvent) {
-		e.preventDefault();
-		setSubmittedName(name);
-	}
+function HomePage() {
+	const [projects] = trpc.projects.list.useSuspenseQuery();
 
 	return (
-		<main className="container">
-			<h1>Welcome to Tauri + React</h1>
+		<div className="px-6 py-4">
+			<CreateProjectInput />
 
-			<div className="row">
-				<a href="https://vite.dev" target="_blank" rel="noopener">
-					<img src="/vite.svg" className="logo vite" alt="Vite logo" />
-				</a>
-				<a href="https://tauri.app" target="_blank" rel="noopener">
-					<img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-				</a>
-				<a href="https://react.dev" target="_blank" rel="noopener">
-					<img src={reactLogo} className="logo react" alt="React logo" />
-				</a>
-			</div>
-			<p>Click on the Tauri, Vite, and React logos to learn more.</p>
+			{projects.length === 0 && (
+				<div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-12">
+					<p className="text-muted-foreground">No projects yet</p>
+					<p className="mt-1 text-sm text-muted-foreground">
+						Create your first project to get started
+					</p>
+				</div>
+			)}
 
-			<form className="row" onSubmit={handleSubmit}>
-				<input
-					id="greet-input"
-					value={name}
-					onChange={(e) => setName(e.currentTarget.value)}
-					placeholder="Enter a name..."
-				/>
-				<button type="submit">Greet</button>
-			</form>
-			<p>{greetQuery.data ?? ""}</p>
-		</main>
+			{projects.length > 0 && (
+				<div className="flex flex-col gap-2">
+					{projects.map((project) => (
+						<ProjectCard key={project.id} project={project} />
+					))}
+				</div>
+			)}
+		</div>
 	);
 }

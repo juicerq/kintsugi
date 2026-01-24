@@ -2,6 +2,12 @@
 
 Tauri 2 shell with React frontend.
 
+## Build Commands
+
+**NEVER run `bun run build` or `vite build`** - there is no need to build the frontend manually. Tauri handles all builds.
+
+For development verification, use `bunx tsc --noEmit` in the desktop folder if needed.
+
 ## Structure
 
 ```
@@ -84,6 +90,74 @@ No Tauri invoke commands - all communication goes through tRPC.
 - File-based routing only (no manual route registration)
 - tRPC for all server communication
 - Providers go in `__root.tsx`
+- **Evitar ternários** - preferir `&&` para renderização condicional:
+
+```tsx
+// ✅ CORRETO
+{isLoading && <Spinner />}
+{error && <ErrorMessage error={error} />}
+{data && <Content data={data} />}
+
+// ❌ ERRADO
+{isLoading ? <Spinner /> : null}
+{data ? <Content data={data} /> : error ? <ErrorMessage /> : null}
+```
+
+- **Evitar `mutateAsync`** - preferir `mutate` com callbacks `onSuccess`/`onError`:
+
+```tsx
+// ✅ CORRETO
+const mutation = trpc.projects.create.useMutation({
+  onSuccess: (data) => {
+    navigate({ to: '/projects/$id', params: { id: data.id } });
+  },
+  onError: (error) => {
+    toast.error(error.message);
+  },
+});
+
+mutation.mutate({ name: 'New Project' });
+
+// ❌ ERRADO
+const mutation = trpc.projects.create.useMutation();
+
+async function handleSubmit() {
+  try {
+    const data = await mutation.mutateAsync({ name: 'New Project' });
+    navigate({ to: '/projects/$id', params: { id: data.id } });
+  } catch (error) {
+    toast.error(error.message);
+  }
+}
+```
+
+### Animações
+
+Usar `motion` (framer-motion) para animações sutis, modernas e satisfatórias:
+
+```tsx
+import { motion, AnimatePresence } from "motion/react";
+
+// Entrada/saída suave
+<AnimatePresence>
+  {visible && (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+    >
+      {children}
+    </motion.div>
+  )}
+</AnimatePresence>
+```
+
+Princípios:
+- **Sutileza**: movimentos pequenos (4-12px), durações curtas (150-300ms)
+- **Propósito**: animar apenas o que muda para guiar atenção do usuário
+- **Consistência**: usar `easeOut` para entradas, `easeIn` para saídas
+- **AnimatePresence**: sempre usar para animações de entrada/saída condicional
 
 ### Arquivos
 
@@ -99,18 +173,20 @@ Cada rota tem suas próprias pastas para código usado somente nela:
 routes/
 ├── home/
 │   ├── route.tsx           # A rota em si
-│   ├── components/         # Componentes exclusivos da rota
+│   ├── -components/        # Componentes exclusivos da rota (prefixo - evita virar rota)
 │   │   └── task-card.tsx
-│   ├── hooks/              # Hooks exclusivos da rota
+│   ├── -hooks/             # Hooks exclusivos da rota
 │   │   └── use-task-filters.ts
 │   ├── types.ts            # Types exclusivos da rota
 │   └── constants.ts        # Constantes exclusivas da rota
 ├── projects/
 │   └── $id/
 │       ├── route.tsx
-│       ├── components/
-│       └── hooks/
+│       ├── -components/
+│       └── -hooks/
 ```
+
+**IMPORTANTE**: Pastas dentro de `routes/` que NÃO são rotas devem ter prefixo `-` (ex: `-components`, `-hooks`). Isso evita que o TanStack Router as trate como rotas.
 
 Se um type/constante é usado em **múltiplas rotas**, mover para:
 - `src/types/` - Types compartilhados

@@ -66,3 +66,6 @@ bun run build          # Full production build
 
 - Never use barrel imports
 - tRPC for all client-server communication (no Tauri invoke)
+- Always prefer early returns over nested conditions
+- Avoid `else` blocks whenever possible - use early returns instead
+- Avoid nested ifs - flatten logic with early returns to prevent layers of `{}` that hurt readability

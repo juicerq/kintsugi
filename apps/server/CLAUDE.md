@@ -61,6 +61,32 @@ export const authRouter = router({
 });
 ```
 
+### Procedures sem async desnecessário
+
+Quando a procedure apenas retorna uma promise do service/repo, **não use async** - retorne a promise diretamente:
+
+```ts
+// ✅ CORRETO - retorna promise diretamente
+export const projectsRouter = router({
+  create: publicProcedure
+    .input(schemas.create)
+    .mutation(({ input }) => projectsRepo.create(input)),
+
+  getById: publicProcedure
+    .input(schemas.getById)
+    .query(({ input }) => projectsRepo.findById(input.id)),
+});
+
+// ❌ ERRADO - async desnecessário
+export const projectsRouter = router({
+  create: publicProcedure
+    .input(schemas.create)
+    .mutation(async ({ input }) => {
+      return await projectsRepo.create(input);
+    }),
+});
+```
+
 ### Organização de Código
 
 ```ts
