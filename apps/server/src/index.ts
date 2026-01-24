@@ -1,5 +1,6 @@
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./router";
+import "./db";
 
 const PORT = 3001;
 
@@ -17,8 +18,8 @@ Bun.serve({
       });
     }
 
-    return new Response("jask-server running", { status: 200 });
+    return new Response("kintsugi-server running", { status: 200 });
   },
 });
 
-console.log(`jask-server listening on http://localhost:${PORT}`);
+console.log(`kintsugi-server listening on http://localhost:${PORT}`);
