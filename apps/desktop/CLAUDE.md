@@ -90,6 +90,36 @@ No Tauri invoke commands - all communication goes through tRPC.
 - File-based routing only (no manual route registration)
 - tRPC for all server communication
 - Providers go in `__root.tsx`
+
+### Tipografia
+
+**SEMPRE** usar `<Title>` e `<Text>` ao invés de `<h1>`, `<p>` com classes manuais:
+
+```tsx
+// ✅ CORRETO
+import { Title } from "@/components/ui/title"
+import { Text } from "@/components/ui/text"
+
+<Title>Título do card</Title>
+<Title size="lg">Título grande</Title>
+<Text>Texto secundário</Text>
+<Text variant="muted">Texto muted</Text>
+
+// ❌ ERRADO
+<h2 className="text-[13px] font-medium text-white/90 tracking-[-0.01em]">Título</h2>
+<p className="text-[12px] text-white/50">Texto</p>
+```
+
+**Title** - para títulos e headings:
+- `size`: `xl` (20px), `lg` (16px), `default` (13px), `sm` (12px)
+- `asChild`: renderiza como outro elemento (`<Title asChild><h1>...</h1></Title>`)
+
+**Text** - para texto corrido:
+- `variant`: `primary` (white/90), `default` (white/70), `muted` (white/50), `faint` (white/40)
+- `size`: `default` (13px), `sm` (12px), `xs` (11px), `xxs` (10px)
+- `weight`: `normal`, `medium`
+- `asChild`: renderiza como outro elemento
+
 - **Evitar ternários** - preferir `&&` para renderização condicional:
 
 ```tsx

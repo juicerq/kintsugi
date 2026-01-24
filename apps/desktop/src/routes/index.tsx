@@ -15,16 +15,16 @@ function HomePage() {
 			<CreateProjectInput />
 
 			{projects.length === 0 && (
-				<div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-12">
-					<p className="text-muted-foreground">No projects yet</p>
-					<p className="mt-1 text-sm text-muted-foreground">
+				<div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-white/[0.08] p-12">
+					<p className="text-white/50 text-[13px]">No projects yet</p>
+					<p className="mt-1 text-[12px] text-white/40">
 						Create your first project to get started
 					</p>
 				</div>
 			)}
 
 			{projects.length > 0 && (
-				<div className="flex flex-col gap-2">
+				<div className="flex flex-col gap-1.5">
 					{projects.map((project) => (
 						<ProjectCard key={project.id} project={project} />
 					))}
