@@ -127,13 +127,13 @@ export function SubtaskItem({
 					type="button"
 					onClick={handleCheckboxClick}
 					className={cn(
-						"flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm border transition-all duration-150 ease-out active:scale-90",
+						"flex size-4 shrink-0 items-center justify-center rounded-sm border transition-all duration-150 ease-out active:scale-95",
 						isCompleted
-							? "border-white/50 bg-white/50"
+							? "border-emerald-500 bg-emerald-500/50"
 							: "border-white/25 hover:border-white/40",
 					)}
 				>
-					{isCompleted && <Check className="h-2 w-2 text-[#0a0a0a]" />}
+					{isCompleted && <Check className="h-2 w-2 text-white/80" />}
 				</button>
 
 				<div className="flex items-center gap-2 min-w-0">

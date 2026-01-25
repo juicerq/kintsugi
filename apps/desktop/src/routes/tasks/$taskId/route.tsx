@@ -19,17 +19,24 @@ function TaskDetailsPage() {
 
 	return (
 		<div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
-			<section>
-				<Text size="xs" variant="label" className="mb-2">
-					Task
-				</Text>
-				<TaskHeader
-					task={task}
-					completedSubtasks={
-						subtasks.filter((s) => s.status === "completed").length
-					}
-					totalSubtasks={subtasks.length}
-				/>
+			<section className="grid grid-cols-5 gap-2">
+				<div className="col-span-3">
+					<Text size="xs" variant="label" className="mb-2">
+						Task
+					</Text>
+					<TaskHeader
+						task={task}
+						completedSubtasks={
+							subtasks.filter((s) => s.status === "completed").length
+						}
+						totalSubtasks={subtasks.length}
+					/>
+				</div>
+				<div className="col-span-2">
+					<Text size="xs" variant="label" className="mb-2">
+						Resume
+					</Text>
+				</div>
 			</section>
 
 			<section className="flex flex-col">

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { Title } from "@/components/ui/title";
@@ -94,135 +95,66 @@ export function TaskHeader({
 
 	return (
 		<>
-			<div className="space-y-0">
+			<div className="w-full transition-colors p-3 rounded-md hover:bg-white/3">
 				{/* Main row - always visible */}
-				<button
-					type="button"
-					onClick={() => setExpanded(!expanded)}
-					className="flex w-full items-center gap-3 rounded-md px-1 py-1 -mx-1 text-left transition-colors hover:bg-white/[0.02] cursor-pointer"
-				>
+				<div className="flex w-full items-start gap-3  -mx-1 text-left">
 					{/* Checkbox */}
 					<motion.div
 						onClick={handleToggleComplete}
-						whileTap={{ scale: 0.9 }}
 						className={cn(
-							"flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border transition-colors cursor-pointer",
+							"flex size-4.5 mt-0.5 shrink-0 items-center justify-center active:scale-95 rounded-sm border transition-colors cursor-pointer",
 							isCompleted
-								? "border-white/20 bg-white/10"
+								? "border-emerald-500 bg-emerald-500/50"
 								: "border-white/20 hover:border-white/40",
 						)}
 					>
-						{isCompleted && <Check className="h-3 w-3 text-white/60" />}
+						{isCompleted && <Check className="h-3 w-3 text-white/80" />}
 					</motion.div>
 
 					{/* Title */}
-					<Title
-						size="lg"
-						className={cn(
-							"flex-1 truncate transition-colors",
-							isCompleted && "text-white/50 line-through",
-						)}
-					>
-						{task.title}
-					</Title>
-
-					{/* Workflow dots - compact indicator */}
-					<div className="flex items-center gap-1">
-						{workflowStages.map((stage) => (
-							<div
-								key={stage.key}
+					<div className="flex-1 space-y-2 flex flex-col">
+						<div className="flex items-center gap-4">
+							<Title
+								size="lg"
 								className={cn(
-									"h-1.5 w-1.5 rounded-full",
-									stage.hasContent ? stage.color : stage.fadedColor,
+									"flex-1 truncate transition-colors",
+									isCompleted && "text-white/25 line-through",
 								)}
-							/>
-						))}
+							>
+								{task.title}
+							</Title>
+
+							{totalSubtasks > 0 && (
+								<Badge variant={isCompleted ? "emerald" : "default"}>
+									{completedSubtasks}/{totalSubtasks}
+								</Badge>
+							)}
+						</div>
+
+						<Text variant="muted">{task.description}</Text>
 					</div>
+				</div>
 
-					{/* Subtask count if any */}
-					{totalSubtasks > 0 && (
-						<Text size="xxs" variant="faint">
-							{completedSubtasks}/{totalSubtasks}
-						</Text>
-					)}
+				<div className="w-full bg-white/10 my-2 rounded-md h-px" />
 
-					{/* Expand indicator */}
-					<motion.div
-						animate={{ rotate: expanded ? 180 : 0 }}
-						transition={{ duration: 0.15 }}
+				<div className="flex items-center">
+					<Badge
+						onClick={handleCopyBranch}
+						className="cursor-pointer flex items-center hover:bg-white/10 active:hover:bg-white/15"
 					>
-						<ChevronDown className="h-3.5 w-3.5 text-white/30" />
-					</motion.div>
-				</button>
+						<GitBranch className="h-3 w-3 text-white/40" />
+						{task.branch_name}
+					</Badge>
 
-				{/* Expanded details */}
-				<AnimatePresence>
-					{expanded && (
-						<motion.div
-							initial={{ opacity: 0, height: 0 }}
-							animate={{ opacity: 1, height: "auto" }}
-							exit={{ opacity: 0, height: 0 }}
-							transition={{ duration: 0.15, ease: "easeOut" }}
-							className="overflow-hidden"
-						>
-							<div className="pl-8 pt-2 pb-1 space-y-3">
-								{/* Description */}
-								{task.description && (
-									<Text variant="muted" className="text-[13px] leading-relaxed">
-										{task.description}
-									</Text>
-								)}
-
-								{/* Meta row */}
-								<div className="flex items-center gap-2 flex-wrap">
-									{/* Workflow button */}
-									<Button
-										variant="ghost"
-										size="xs"
-										onClick={() => setWorkflowOpen(true)}
-										className="text-white/50 hover:text-white/80 hover:bg-white/[0.06] gap-1.5"
-									>
-										<Sparkles className="h-3 w-3" />
-										<span>Workflow</span>
-										<span className="text-white/40">{completedStages}/3</span>
-									</Button>
-
-									{/* Branch */}
-									{task.branch_name && (
-										<button
-											type="button"
-											onClick={handleCopyBranch}
-											className={cn(
-												"group flex items-center gap-1.5 rounded px-2 py-1 h-6",
-												"bg-white/[0.04] hover:bg-white/[0.08]",
-												"transition-colors",
-											)}
-										>
-											<GitBranch className="h-3 w-3 text-white/40" />
-											<code className="font-mono text-[11px] text-white/50 group-hover:text-white/70">
-												{task.branch_name}
-											</code>
-											{copied ? (
-												<Check className="h-3 w-3 text-emerald-400" />
-											) : (
-												<Copy className="h-3 w-3 text-white/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-											)}
-										</button>
-									)}
-
-									{/* Created time */}
-									<div className="flex items-center gap-1 px-1">
-										<Clock className="h-3 w-3 text-white/30" />
-										<Text size="xxs" variant="faint">
-											{relativeTime}
-										</Text>
-									</div>
-								</div>
-							</div>
-						</motion.div>
-					)}
-				</AnimatePresence>
+					<div className="ml-auto flex items-center gap-1.5">
+						<Text variant="faint" size="xs">
+							Created {relativeTime}
+						</Text>
+					</div>
+				</div>
 			</div>
+
+			<div></div>
 
 			{/* Workflow Dialog */}
 			<WorkflowDialog
