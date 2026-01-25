@@ -21,7 +21,10 @@ function ProjectTasksPage() {
 				<SettingsButton />
 			</div>
 			<TaskInput projectId={projectId} />
-			<TaskList incompleteTasks={incompleteTasks} completedTasks={completedTasks} />
+			<TaskList
+				incompleteTasks={incompleteTasks}
+				completedTasks={completedTasks}
+			/>
 		</div>
 	);
 }

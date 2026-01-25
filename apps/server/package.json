@@ -1,22 +1,22 @@
 {
-  "name": "@kintsugi/server",
-  "private": true,
-  "version": "0.1.0",
-  "type": "module",
-  "scripts": {
-    "dev": "bun --watch src/index.ts",
-    "build": "bun build ./src/index.ts --compile --outfile ../desktop/src-tauri/binaries/kintsugi-server-x86_64-unknown-linux-gnu",
-    "test": "bun test",
-    "test:watch": "bun test --watch",
-    "test:coverage": "bun test --coverage"
-  },
-  "dependencies": {
-    "@trpc/server": "^11.1.2",
-    "kysely": "^0.28.10",
-    "kysely-bun-sqlite": "^0.4.0",
-    "zod": "^3.25.28"
-  },
-  "devDependencies": {
-    "@types/bun": "^1.2.19"
-  }
+	"name": "@kintsugi/server",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"scripts": {
+		"dev": "bun --watch src/index.ts",
+		"build": "bun build ./src/index.ts --compile --outfile ../desktop/src-tauri/binaries/kintsugi-server-x86_64-unknown-linux-gnu",
+		"test": "bun test",
+		"test:watch": "bun test --watch",
+		"test:coverage": "bun test --coverage"
+	},
+	"dependencies": {
+		"@trpc/server": "^11.1.2",
+		"kysely": "^0.28.10",
+		"kysely-bun-sqlite": "^0.4.0",
+		"zod": "^3.25.28"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.2.19"
+	}
 }

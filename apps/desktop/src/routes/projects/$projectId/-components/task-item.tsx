@@ -1,8 +1,8 @@
-import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Check, X } from "lucide-react";
-import { Text } from "@/components/ui/text";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
 import { trpc } from "../../../../trpc";
 
@@ -35,7 +35,8 @@ export function TaskItem({ task }: TaskItemProps) {
 	});
 
 	const isCompleted = task.completed_at !== null;
-	const allSubtasksComplete = task.total_subtasks > 0 && task.completed_subtasks === task.total_subtasks;
+	const allSubtasksComplete =
+		task.total_subtasks > 0 && task.completed_subtasks === task.total_subtasks;
 
 	function handleCheckboxClick(e: React.MouseEvent) {
 		e.preventDefault();
@@ -67,17 +68,14 @@ export function TaskItem({ task }: TaskItemProps) {
 					"flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border transition-colors",
 					isCompleted
 						? "border-white/20 bg-white/10"
-						: "border-white/20 hover:border-white/40"
+						: "border-white/20 hover:border-white/40",
 				)}
 			>
 				{isCompleted && <Check className="h-3 w-3 text-white/60" />}
 			</button>
 
 			<Text
-				className={cn(
-					"flex-1 min-w-0 truncate",
-					isCompleted && "line-through"
-				)}
+				className={cn("flex-1 min-w-0 truncate", isCompleted && "line-through")}
 				variant={isCompleted ? "muted" : "default"}
 			>
 				{task.title}
@@ -85,9 +83,7 @@ export function TaskItem({ task }: TaskItemProps) {
 
 			{task.total_subtasks > 0 && (
 				<div className="flex items-center gap-1.5">
-					{allSubtasksComplete && (
-						<Check className="h-3 w-3 text-green-500" />
-					)}
+					{allSubtasksComplete && <Check className="h-3 w-3 text-green-500" />}
 					<Text size="xs" variant="muted">
 						{task.completed_subtasks}/{task.total_subtasks}
 					</Text>
@@ -101,7 +97,8 @@ export function TaskItem({ task }: TaskItemProps) {
 				onBlur={() => setPendingDelete(false)}
 				className={cn(
 					"opacity-0 group-hover:opacity-100 transition-opacity",
-					pendingDelete && "opacity-100 bg-red-500/20 text-red-700 hover:bg-red-500/30 hover:text-red-600"
+					pendingDelete &&
+						"opacity-100 bg-red-500/20 text-red-700 hover:bg-red-500/30 hover:text-red-600",
 				)}
 			>
 				{pendingDelete ? (

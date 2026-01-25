@@ -6,7 +6,7 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"includes": ["apps/**", "packages/**"]
+		"includes": ["apps/**", "packages/**", "!**/routeTree.gen.ts", "!**/*.css"]
 	},
 	"formatter": {
 		"enabled": true,
@@ -15,7 +15,17 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"recommended": true
+			"recommended": true,
+			"style": {
+				"noNonNullAssertion": "off"
+			},
+			"a11y": {
+				"noStaticElementInteractions": "off",
+				"useKeyWithClickEvents": "off"
+			},
+			"correctness": {
+				"noUnreachable": "off"
+			}
 		}
 	},
 	"javascript": {

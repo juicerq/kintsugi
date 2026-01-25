@@ -2,7 +2,7 @@ import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function SettingsButton() {
-	return null
+	return null;
 
 	return (
 		<Button variant="ghost" size="icon-xs">

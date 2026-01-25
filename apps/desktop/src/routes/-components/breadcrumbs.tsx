@@ -1,4 +1,4 @@
-import { useLocation, Link } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import { trpc } from "../../trpc";
 
 interface BreadcrumbSegment {
@@ -14,7 +14,7 @@ function useBreadcrumbs(pathname: string): BreadcrumbSegment[] {
 
 	const { data: task } = trpc.tasks.get.useQuery(
 		{ id: taskId! },
-		{ enabled: !!taskId }
+		{ enabled: !!taskId },
 	);
 
 	const segments: BreadcrumbSegment[] = [{ label: "Kintsugi", href: "/" }];
@@ -57,7 +57,7 @@ export function Breadcrumbs() {
 	return (
 		<nav className="flex items-center gap-2 text-sm border-b p-3 w-full">
 			{segments.map((seg, i) => (
-				<span key={i} className="flex items-center gap-2">
+				<span key={seg.href ?? seg.label} className="flex items-center gap-2">
 					{i > 0 && <span className="text-muted-foreground">/</span>}
 					{seg.href && (
 						<Link

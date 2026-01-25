@@ -1,106 +1,106 @@
-import { describe, test, expect, beforeEach } from "bun:test";
-import { createTestDb, createProject } from "../../../test/helpers";
+import { beforeEach, describe, expect, test } from "bun:test";
+import { createProject, createTestDb } from "../../../test/helpers";
 import { createProjectsRepository } from "./projects";
 
 describe("ProjectsRepository", () => {
-  let db: Awaited<ReturnType<typeof createTestDb>>;
-  let projects: ReturnType<typeof createProjectsRepository>;
+	let db: Awaited<ReturnType<typeof createTestDb>>;
+	let projects: ReturnType<typeof createProjectsRepository>;
 
-  beforeEach(async () => {
-    db = await createTestDb();
-    projects = createProjectsRepository(db);
-  });
+	beforeEach(async () => {
+		db = await createTestDb();
+		projects = createProjectsRepository(db);
+	});
 
-  describe("create", () => {
-    test("creates a project", async () => {
-      const data = createProject({ name: "My App" });
-      const created = await projects.create(data);
+	describe("create", () => {
+		test("creates a project", async () => {
+			const data = createProject({ name: "My App" });
+			const created = await projects.create(data);
 
-      expect(created.id).toBe(data.id);
-      expect(created.name).toBe("My App");
-      expect(created.path).toBe("/tmp/test");
-      expect(created.description).toBeNull();
-      expect(created.created_at).toBeDefined();
-    });
+			expect(created.id).toBe(data.id);
+			expect(created.name).toBe("My App");
+			expect(created.path).toBe("/tmp/test");
+			expect(created.description).toBeNull();
+			expect(created.created_at).toBeDefined();
+		});
 
-    test("creates project with description", async () => {
-      const data = createProject({ description: "A test project" });
-      const created = await projects.create(data);
+		test("creates project with description", async () => {
+			const data = createProject({ description: "A test project" });
+			const created = await projects.create(data);
 
-      expect(created.description).toBe("A test project");
-    });
-  });
+			expect(created.description).toBe("A test project");
+		});
+	});
 
-  describe("findById", () => {
-    test("returns project when exists", async () => {
-      const data = createProject();
-      await projects.create(data);
+	describe("findById", () => {
+		test("returns project when exists", async () => {
+			const data = createProject();
+			await projects.create(data);
 
-      const found = await projects.findById(data.id);
+			const found = await projects.findById(data.id);
 
-      expect(found).toBeDefined();
-      expect(found?.id).toBe(data.id);
-    });
+			expect(found).toBeDefined();
+			expect(found?.id).toBe(data.id);
+		});
 
-    test("returns undefined when not exists", async () => {
-      const found = await projects.findById("non-existent-id");
+		test("returns undefined when not exists", async () => {
+			const found = await projects.findById("non-existent-id");
 
-      expect(found).toBeUndefined();
-    });
-  });
+			expect(found).toBeUndefined();
+		});
+	});
 
-  describe("list", () => {
-    test("returns empty array when no projects", async () => {
-      const all = await projects.list();
+	describe("list", () => {
+		test("returns empty array when no projects", async () => {
+			const all = await projects.list();
 
-      expect(all).toEqual([]);
-    });
+			expect(all).toEqual([]);
+		});
 
-    test("returns all projects", async () => {
-      await projects.create(createProject({ name: "A" }));
-      await projects.create(createProject({ name: "B" }));
-      await projects.create(createProject({ name: "C" }));
+		test("returns all projects", async () => {
+			await projects.create(createProject({ name: "A" }));
+			await projects.create(createProject({ name: "B" }));
+			await projects.create(createProject({ name: "C" }));
 
-      const all = await projects.list();
+			const all = await projects.list();
 
-      expect(all).toHaveLength(3);
-    });
-  });
+			expect(all).toHaveLength(3);
+		});
+	});
 
-  describe("update", () => {
-    test("updates project name", async () => {
-      const data = createProject({ name: "Old Name" });
-      await projects.create(data);
+	describe("update", () => {
+		test("updates project name", async () => {
+			const data = createProject({ name: "Old Name" });
+			await projects.create(data);
 
-      const updated = await projects.update(data.id, { name: "New Name" });
+			const updated = await projects.update(data.id, { name: "New Name" });
 
-      expect(updated?.name).toBe("New Name");
-    });
+			expect(updated?.name).toBe("New Name");
+		});
 
-    test("returns undefined when project not exists", async () => {
-      const updated = await projects.update("non-existent", { name: "Test" });
+		test("returns undefined when project not exists", async () => {
+			const updated = await projects.update("non-existent", { name: "Test" });
 
-      expect(updated).toBeUndefined();
-    });
-  });
+			expect(updated).toBeUndefined();
+		});
+	});
 
-  describe("delete", () => {
-    test("deletes project", async () => {
-      const data = createProject();
-      await projects.create(data);
+	describe("delete", () => {
+		test("deletes project", async () => {
+			const data = createProject();
+			await projects.create(data);
 
-      const deleted = await projects.delete(data.id);
+			const deleted = await projects.delete(data.id);
 
-      expect(deleted?.id).toBe(data.id);
+			expect(deleted?.id).toBe(data.id);
 
-      const found = await projects.findById(data.id);
-      expect(found).toBeUndefined();
-    });
+			const found = await projects.findById(data.id);
+			expect(found).toBeUndefined();
+		});
 
-    test("returns undefined when project not exists", async () => {
-      const deleted = await projects.delete("non-existent");
+		test("returns undefined when project not exists", async () => {
+			const deleted = await projects.delete("non-existent");
 
-      expect(deleted).toBeUndefined();
-    });
-  });
+			expect(deleted).toBeUndefined();
+		});
+	});
 });

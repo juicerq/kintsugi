@@ -1,5 +1,5 @@
-import { Link } from "@tanstack/react-router";
 import type { RouterOutputs } from "@kintsugi/shared";
+import { Link } from "@tanstack/react-router";
 import { DragHandle } from "./drag-handle";
 
 type Project = RouterOutputs["projects"]["list"][number];

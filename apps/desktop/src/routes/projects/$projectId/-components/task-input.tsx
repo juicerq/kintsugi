@@ -1,7 +1,7 @@
-import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { Input } from "@/components/ui/input";
+import { AnimatePresence, motion } from "motion/react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { trpc } from "../../../../trpc";
 
@@ -93,7 +93,7 @@ export function TaskInput({ projectId }: TaskInputProps) {
 							placeholder="Add more details..."
 							value={description}
 							onChange={(e) => setDescription(e.target.value)}
-							className="placeholder:text-muted-foreground dark:bg-input/30 border-input min-h-[72px] w-full resize-none rounded-md border bg-transparent px-3 py-2 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 placeholder:text-xs"
+							className="placeholder:text-muted-foreground dark:bg-input/30 border-input min-h-18 w-full resize-none rounded-md border bg-transparent px-3 py-2 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 placeholder:text-xs"
 						/>
 						<Text size="sm" variant="muted" className="mb-1.5 mt-4">
 							Branch
@@ -104,7 +104,12 @@ export function TaskInput({ projectId }: TaskInputProps) {
 							onChange={(e) => setBranchName(e.target.value)}
 						/>
 						<div className="mt-4 flex justify-end gap-2">
-							<Button variant="ghost" size="sm" className="text-white/40 hover:bg-transparent" onClick={handleCancel}>
+							<Button
+								variant="ghost"
+								size="sm"
+								className="text-white/40 hover:bg-transparent"
+								onClick={handleCancel}
+							>
 								Cancel
 							</Button>
 							<Button

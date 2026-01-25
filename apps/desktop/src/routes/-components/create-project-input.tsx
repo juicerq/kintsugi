@@ -1,9 +1,9 @@
-import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { Folder } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { Input } from "@/components/ui/input";
+import { Folder } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { trpc } from "../../trpc";
 
 export function CreateProjectInput() {
@@ -46,11 +46,7 @@ export function CreateProjectInput() {
 	}
 
 	return (
-		<div
-			ref={containerRef}
-			className="mb-8"
-			onBlur={handleBlur}
-		>
+		<div ref={containerRef} className="mb-8" onBlur={handleBlur}>
 			<Input
 				placeholder="Nome do projeto..."
 				value={name}
