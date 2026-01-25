@@ -1,8 +1,8 @@
 import { Database } from "bun:sqlite";
 import { Kysely } from "kysely";
 import { BunSqliteDialect } from "kysely-bun-sqlite";
-import { runMigrations } from "../src/db/migrations";
-import type { Database as DB } from "../src/db/types";
+import { runMigrations } from "../db/migrations";
+import type { Database as DB } from "../db/types";
 
 export async function createTestDb() {
 	const sqlite = new Database(":memory:");

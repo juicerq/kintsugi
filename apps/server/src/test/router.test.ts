@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { createTestDb } from "../test/helpers";
-import { createAppRouter } from "./router";
+import { createAppRouter } from "../router";
+import { createTestDb } from "./helpers";
 
 describe("AppRouter", () => {
 	let db: Awaited<ReturnType<typeof createTestDb>>;

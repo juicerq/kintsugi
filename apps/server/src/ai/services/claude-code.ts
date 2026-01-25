@@ -2,9 +2,11 @@ import {
 	unstable_v2_createSession,
 	unstable_v2_resumeSession,
 } from "@anthropic-ai/claude-agent-sdk";
-import { db } from "../../db";
+import type { Kysely } from "kysely";
+import { db as defaultDb } from "../../db";
 import { createAiMessagesRepository } from "../../db/repositories/ai-messages";
 import { createAiSessionsRepository } from "../../db/repositories/ai-sessions";
+import type { Database } from "../../db/types";
 import { BaseAiClient } from "../core";
 import type {
 	AiMessage,
@@ -43,6 +45,7 @@ type ClaudeCodeSessionHandle = {
 
 export type ClaudeCodeClientConfig = {
 	model?: string;
+	db?: Kysely<Database>;
 	createSession?: (input: { model: string }) => ClaudeCodeSessionHandle;
 	resumeSession?: (
 		sessionId: string,
@@ -59,8 +62,8 @@ class SessionControlError extends Error {
 
 export class ClaudeCodeClient extends BaseAiClient {
 	readonly service = "claude" as const;
-	private sessionsRepo = createAiSessionsRepository(db);
-	private messagesRepo = createAiMessagesRepository(db);
+	private sessionsRepo: ReturnType<typeof createAiSessionsRepository>;
+	private messagesRepo: ReturnType<typeof createAiMessagesRepository>;
 	private sessionCache = new Map<string, ClaudeCodeSessionHandle>();
 	private createSessionHandler: (input: {
 		model: string;
@@ -72,9 +75,11 @@ export class ClaudeCodeClient extends BaseAiClient {
 
 	constructor(private config: ClaudeCodeClientConfig) {
 		super();
+		const db = config.db ?? defaultDb;
+		this.sessionsRepo = createAiSessionsRepository(db);
+		this.messagesRepo = createAiMessagesRepository(db);
 		this.createSessionHandler =
 			config.createSession ?? unstable_v2_createSession;
-
 		this.resumeSessionHandler =
 			config.resumeSession ?? unstable_v2_resumeSession;
 	}
@@ -88,7 +93,15 @@ export class ClaudeCodeClient extends BaseAiClient {
 
 		const session = this.createSessionHandler({ model });
 
-		const sessionId = this.getSessionId(session);
+		// SDK v2 only exposes session_id after first stream(), so we send an init message
+		await session.send(".");
+		let sessionId: string | null = null;
+		for await (const message of session.stream()) {
+			if (message.session_id) {
+				sessionId = message.session_id;
+				break;
+			}
+		}
 
 		if (!sessionId) {
 			throw new Error("Claude Code session ID not available");
@@ -185,16 +198,12 @@ export class ClaudeCodeClient extends BaseAiClient {
 		try {
 			await session.send(input.content);
 
-			let sessionId = input.sessionId;
+			const sessionId = input.sessionId;
 			const assistantChunks: string[] = [];
 			const assistantRaw: ClaudeCodeSdkMessage[] = [];
 			let assistantRole: AiRole = "assistant";
 
 			for await (const message of session.stream()) {
-				if (message.session_id) {
-					sessionId = message.session_id;
-				}
-
 				await this.refreshHeartbeat(sessionId);
 
 				const controlReason = await this.checkControl(sessionId);
@@ -369,10 +378,6 @@ export class ClaudeCodeClient extends BaseAiClient {
 
 	private now() {
 		return new Date().toISOString();
-	}
-
-	private getSessionId(session: ClaudeCodeSessionHandle): string | null {
-		return session.id ?? session.sessionId ?? session.session_id ?? null;
 	}
 
 	private scopeToColumns(scope?: AiSessionScope) {
