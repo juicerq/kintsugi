@@ -1,18 +1,10 @@
-import { formatDistanceToNow } from "date-fns";
-import {
-	Check,
-	ChevronDown,
-	Clock,
-	Copy,
-	GitBranch,
-	Sparkles,
-} from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { Check, GitBranch } from "lucide-react";
+import { motion } from "motion/react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { Title } from "@/components/ui/title";
+import { dayjs } from "@/lib/dayjs";
 import { cn } from "@/lib/utils";
 import { trpc } from "../../../../trpc";
 import { WorkflowDialog } from "./workflow-dialog";
@@ -39,8 +31,6 @@ export function TaskHeader({
 	completedSubtasks = 0,
 	totalSubtasks = 0,
 }: TaskHeaderProps) {
-	const [expanded, setExpanded] = useState(false);
-	const [copied, setCopied] = useState(false);
 	const [workflowOpen, setWorkflowOpen] = useState(false);
 
 	const utils = trpc.useUtils();
@@ -53,49 +43,16 @@ export function TaskHeader({
 
 	const isCompleted = task.completed_at !== null;
 
-	const workflowStages = [
-		{
-			key: "brainstorm",
-			hasContent: !!task.brainstorm,
-			color: "bg-purple-500",
-			fadedColor: "bg-purple-500/30",
-		},
-		{
-			key: "architecture",
-			hasContent: !!task.architecture,
-			color: "bg-amber-500",
-			fadedColor: "bg-amber-500/30",
-		},
-		{
-			key: "review",
-			hasContent: !!task.review,
-			color: "bg-green-500",
-			fadedColor: "bg-green-500/30",
-		},
-	];
-
-	const completedStages = workflowStages.filter((s) => s.hasContent).length;
-
-	async function handleCopyBranch(e: React.MouseEvent) {
-		e.stopPropagation();
-		if (!task.branch_name) return;
-		await navigator.clipboard.writeText(task.branch_name);
-		setCopied(true);
-		setTimeout(() => setCopied(false), 2000);
-	}
-
 	function handleToggleComplete(e: React.MouseEvent) {
 		e.stopPropagation();
 		toggleComplete.mutate({ id: task.id });
 	}
 
-	const relativeTime = formatDistanceToNow(new Date(task.created_at), {
-		addSuffix: true,
-	});
+	const relativeTime = dayjs(task.created_at).fromNow();
 
 	return (
 		<>
-			<div className="w-full transition-colors p-3 rounded-md hover:bg-white/3">
+			<div className="w-full transition-colors p-3 rounded-md bg-white/3 hover:bg-white/4">
 				{/* Main row - always visible */}
 				<div className="flex w-full items-start gap-3  -mx-1 text-left">
 					{/* Checkbox */}
@@ -138,13 +95,9 @@ export function TaskHeader({
 				<div className="w-full bg-white/10 my-2 rounded-md h-px" />
 
 				<div className="flex items-center">
-					<Badge
-						onClick={handleCopyBranch}
-						className="cursor-pointer py-1 px-2 flex items-center hover:bg-white/10 active:hover:bg-white/15"
-					>
-						<GitBranch className="h-3 w-3 text-white/40" />
-						{task.branch_name}
-					</Badge>
+					{task.branch_name && (
+						<TaskHeaderBranchName branchName={task.branch_name} />
+					)}
 
 					<div className="ml-auto flex items-center gap-1.5">
 						<Text variant="faint" size="xs">
@@ -163,5 +116,26 @@ export function TaskHeader({
 				task={task}
 			/>
 		</>
+	);
+}
+
+interface TaskHeaderBranchNameProps {
+	branchName: string;
+}
+
+function TaskHeaderBranchName({ branchName }: TaskHeaderBranchNameProps) {
+	async function handleCopyBranch(e: React.MouseEvent) {
+		e.stopPropagation();
+		await navigator.clipboard.writeText(branchName);
+	}
+
+	return (
+		<Badge
+			onClick={handleCopyBranch}
+			className="cursor-pointer rounded-md py-1 px-2 flex items-center hover:bg-white/10 active:hover:bg-white/15"
+		>
+			<GitBranch className="h-3 w-3 text-white/40" />
+			{branchName}
+		</Badge>
 	);
 }

@@ -16,7 +16,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
 		.addColumn("path", "text", (col) => col.notNull())
 		.addColumn("description", "text")
 		.addColumn("created_at", "text", (col) =>
-			col.defaultTo(sql`CURRENT_TIMESTAMP`),
+			col.defaultTo(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
 		)
 		.execute();
 
@@ -33,7 +33,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
 		.addColumn("architecture", "text")
 		.addColumn("review", "text")
 		.addColumn("created_at", "text", (col) =>
-			col.defaultTo(sql`CURRENT_TIMESTAMP`),
+			col.defaultTo(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
 		)
 		.addColumn("completed_at", "text")
 		.execute();

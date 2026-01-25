@@ -3,6 +3,7 @@ import { Text } from "@/components/ui/text";
 import { trpc } from "../../../trpc";
 import { SubtaskList } from "./-components/subtask-list";
 import { TaskHeader } from "./-components/task-header";
+// import { TaskResume } from "./-components/task-resume";
 
 export const Route = createFileRoute("/tasks/$taskId")({
 	component: TaskDetailsPage,
@@ -18,9 +19,9 @@ function TaskDetailsPage() {
 	}
 
 	return (
-		<div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
-			<section className="grid grid-cols-5 gap-2">
-				<div className="col-span-3">
+		<div className="flex flex-1 flex-col gap-4 p-4">
+			<section className="grid grid-cols-5 gap-4">
+				<div className="col-span-5">
 					<Text size="xs" variant="label" className="mb-2">
 						Task
 					</Text>
@@ -32,11 +33,13 @@ function TaskDetailsPage() {
 						totalSubtasks={subtasks.length}
 					/>
 				</div>
-				<div className="col-span-2">
+				{/*TODO: terminar, repense o que adicionar aqui e etc*/}
+				{/*<div className="col-span-2">
 					<Text size="xs" variant="label" className="mb-2">
 						Resume
 					</Text>
-				</div>
+					<TaskResume task={task} />
+				</div>*/}
 			</section>
 
 			<section className="flex flex-col">

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4a4a4a"/>
+      <stop offset="50%" stop-color="#3a3a3a"/>
+      <stop offset="100%" stop-color="#2a2a2a"/>
+    </linearGradient>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f0c850"/>
+      <stop offset="50%" stop-color="#d4a855"/>
+      <stop offset="100%" stop-color="#b8922a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect x="32" y="32" width="448" height="448" rx="80" ry="80" fill="url(#bgGradient)"/>
+
+  <!-- Kintsugi golden cracks - BOLDER for small sizes -->
+  <g stroke="url(#goldGradient)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- Main crack from top-left to center -->
+    <path d="M 80 130 Q 140 200, 256 270"/>
+
+    <!-- Crack from center to top-right -->
+    <path d="M 256 270 Q 340 200, 430 110"/>
+
+    <!-- Crack from center to bottom-right -->
+    <path d="M 256 270 Q 320 340, 400 430"/>
+
+    <!-- Crack from center to bottom-left -->
+    <path d="M 256 270 Q 180 340, 100 420"/>
+
+    <!-- Branch crack to left edge -->
+    <path d="M 170 205 Q 120 220, 60 240"/>
+
+    <!-- Branch crack upward -->
+    <path d="M 350 175 Q 370 130, 390 80"/>
+  </g>
+</svg>
