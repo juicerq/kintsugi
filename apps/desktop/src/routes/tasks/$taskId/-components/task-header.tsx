@@ -140,7 +140,7 @@ export function TaskHeader({
 				<div className="flex items-center">
 					<Badge
 						onClick={handleCopyBranch}
-						className="cursor-pointer flex items-center hover:bg-white/10 active:hover:bg-white/15"
+						className="cursor-pointer py-1 px-2 flex items-center hover:bg-white/10 active:hover:bg-white/15"
 					>
 						<GitBranch className="h-3 w-3 text-white/40" />
 						{task.branch_name}
