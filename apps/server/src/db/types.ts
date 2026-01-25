@@ -18,6 +18,7 @@ export interface TaskTable {
   architecture: string | null;
   review: string | null;
   created_at: Generated<string>;
+  completed_at: string | null;
 }
 
 export type SubtaskCategory = "code" | "test" | "docs" | "fix" | "refactor";

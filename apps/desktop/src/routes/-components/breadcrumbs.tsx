@@ -1,11 +1,14 @@
 import { useLocation, Link } from "@tanstack/react-router";
+import { trpc } from "../../trpc";
 
 interface BreadcrumbSegment {
 	label: string;
 	href?: string;
 }
 
-function buildBreadcrumbs(pathname: string): BreadcrumbSegment[] {
+function useBreadcrumbs(pathname: string): BreadcrumbSegment[] {
+	const [projects] = trpc.projects.list.useSuspenseQuery();
+
 	const segments: BreadcrumbSegment[] = [{ label: "Kintsugi", href: "/" }];
 
 	if (pathname === "/") {
@@ -13,15 +16,22 @@ function buildBreadcrumbs(pathname: string): BreadcrumbSegment[] {
 		return segments;
 	}
 
-	// Future: handle /projects/$id and deeper routes
-	// For now, just handle the index route
+	const projectMatch = pathname.match(/^\/projects\/([^/]+)/);
+	if (projectMatch) {
+		const projectId = projectMatch[1];
+		const project = projects.find((p) => p.id === projectId);
+		const projectName = project?.name ?? "Project";
+
+		segments.push({ label: projectName, href: "/" });
+		segments.push({ label: "Tasks" });
+	}
 
 	return segments;
 }
 
 export function Breadcrumbs() {
 	const location = useLocation();
-	const segments = buildBreadcrumbs(location.pathname);
+	const segments = useBreadcrumbs(location.pathname);
 
 	return (
 		<nav className="flex items-center gap-2 text-sm">

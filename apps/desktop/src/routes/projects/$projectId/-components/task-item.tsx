@@ -1,0 +1,108 @@
+import { useState } from "react";
+import { Check, X } from "lucide-react";
+import { Text } from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { trpc } from "../../../../trpc";
+
+interface TaskItemProps {
+	task: {
+		id: string;
+		project_id: string;
+		title: string;
+		completed_at: string | null;
+		total_subtasks: number;
+		completed_subtasks: number;
+	};
+}
+
+export function TaskItem({ task }: TaskItemProps) {
+	const [pendingDelete, setPendingDelete] = useState(false);
+
+	const utils = trpc.useUtils();
+
+	const toggleComplete = trpc.tasks.toggleComplete.useMutation({
+		onSuccess: () => {
+			utils.tasks.list.invalidate({ projectId: task.project_id });
+		},
+	});
+
+	const deleteTask = trpc.tasks.delete.useMutation({
+		onSuccess: () => {
+			utils.tasks.list.invalidate({ projectId: task.project_id });
+		},
+	});
+
+	const isCompleted = task.completed_at !== null;
+	const allSubtasksComplete = task.total_subtasks > 0 && task.completed_subtasks === task.total_subtasks;
+
+	function handleCheckboxClick() {
+		toggleComplete.mutate({ id: task.id });
+	}
+
+	function handleDeleteClick() {
+		if (!pendingDelete) {
+			setPendingDelete(true);
+			return;
+		}
+		deleteTask.mutate({ id: task.id });
+	}
+
+	return (
+		<div
+			className="group flex items-center gap-3 py-2 px-1"
+			onMouseLeave={() => setPendingDelete(false)}
+		>
+			<button
+				type="button"
+				onClick={handleCheckboxClick}
+				className={cn(
+					"flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors",
+					isCompleted
+						? "border-white/20 bg-white/10"
+						: "border-white/20 hover:border-white/40"
+				)}
+			>
+				{isCompleted && <Check className="h-3 w-3 text-white/60" />}
+			</button>
+
+			<Text
+				className={cn(
+					"flex-1 min-w-0 truncate",
+					isCompleted && "line-through"
+				)}
+				variant={isCompleted ? "muted" : "default"}
+			>
+				{task.title}
+			</Text>
+
+			{task.total_subtasks > 0 && (
+				<div className="flex items-center gap-1.5">
+					{allSubtasksComplete && (
+						<Check className="h-3 w-3 text-green-500" />
+					)}
+					<Text size="xs" variant="muted">
+						{task.completed_subtasks}/{task.total_subtasks}
+					</Text>
+				</div>
+			)}
+
+			<Button
+				variant="ghost"
+				size="icon-xs"
+				onClick={handleDeleteClick}
+				onBlur={() => setPendingDelete(false)}
+				className={cn(
+					"opacity-0 group-hover:opacity-100 transition-opacity",
+					pendingDelete && "opacity-100 text-red-400 hover:text-red-300"
+				)}
+			>
+				{pendingDelete ? (
+					<Check className="h-3 w-3" />
+				) : (
+					<X className="h-3 w-3" />
+				)}
+			</Button>
+		</div>
+	);
+}

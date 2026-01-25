@@ -2,6 +2,8 @@
 
 Bun tRPC server that compiles to a sidecar binary for Tauri.
 
+**NUNCA rodar `bun run dev:server` — assuma que já está rodando. Se não estiver, peça pro usuário rodar.**
+
 ## Structure
 
 ```
@@ -16,9 +18,9 @@ server/
 │   │       ├── helpers.ts       # Funções utilitárias (único lugar para funções soltas)
 │   │       └── *.test.ts        # Testes co-localizados
 │   ├── db/
-│   │   ├── index.ts             # Kysely instance
-│   │   ├── schema.ts            # CREATE TABLE statements
-│   │   └── types.ts             # Database types
+│   │   ├── index.ts             # Kysely instance + migration runner
+│   │   ├── types.ts             # Database types
+│   │   └── migrations/          # Kysely migrations (auto-run on startup)
 │   ├── lib/
 │   │   ├── trpc.ts              # tRPC instance + procedures base
 │   │   ├── types.ts             # Utility types (Maybe, Result)
@@ -261,7 +263,31 @@ Compila para binário standalone via `bun build --compile`.
 
 Kysely com `bun:sqlite`. Arquivo: `kintsugi.db` (ou `KINTSUGI_DB_PATH` env).
 
-Schema auto-inicializa no start via `db/schema.ts`.
+### Migrations
+
+Arquivos em `src/db/migrations/`. Rodam automaticamente no startup via Kysely Migrator.
+
+Para criar nova migration:
+1. Criar arquivo `NNN_descricao.ts` em `src/db/migrations/`
+2. Exportar função `up(db: Kysely<unknown>): Promise<void>`
+3. Atualizar types em `src/db/types.ts` se necessário
+
+Exemplo:
+```typescript
+import { Kysely, sql } from "kysely"
+
+export async function up(db: Kysely<unknown>): Promise<void> {
+  await db.schema
+    .alterTable("tasks")
+    .addColumn("priority", "integer", (col) => col.defaultTo(0))
+    .execute()
+}
+```
+
+Convenções:
+- Prefixo numérico de 3 dígitos: `001`, `002`, `010`
+- Nome descritivo em snake_case: `002_add_priority_to_tasks.ts`
+- Sem rollback (forward-only migrations)
 
 ## Data Models
 
