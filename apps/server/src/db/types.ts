@@ -40,8 +40,37 @@ export interface SubtaskTable {
 	notes: string | null;
 }
 
+export interface AiSessionTable {
+	id: string;
+	service: string;
+	title: string | null;
+	model: string | null;
+	scope_project_id: string | null;
+	scope_repo_path: string | null;
+	scope_workspace_id: string | null;
+	scope_label: string | null;
+	metadata: string | null;
+	status: string | null;
+	stop_requested: Generated<number>;
+	last_heartbeat_at: string | null;
+	last_error: string | null;
+	created_at: Generated<string>;
+}
+
+export interface AiMessageTable {
+	id: string;
+	session_id: string;
+	role: string;
+	content: string;
+	metadata: string | null;
+	raw: string | null;
+	created_at: Generated<string>;
+}
+
 export interface Database {
 	projects: ProjectTable;
 	tasks: TaskTable;
 	subtasks: SubtaskTable;
+	ai_sessions: AiSessionTable;
+	ai_messages: AiMessageTable;
 }

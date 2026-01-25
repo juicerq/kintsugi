@@ -25,7 +25,7 @@ export class OpenCodeClient extends BaseAiClient {
 			title: input.title,
 			metadata,
 		});
-		return this.toAiSession(session, input.scope);
+		return this.convertToLocalSession(session, input.scope);
 	}
 
 	async listSessions(input?: ListSessionsInput): Promise<AiSession[]> {
@@ -34,12 +34,12 @@ export class OpenCodeClient extends BaseAiClient {
 			limit: input?.limit,
 			metadata,
 		});
-		return sessions.map((session) => this.toAiSession(session));
+		return sessions.map((session) => this.convertToLocalSession(session));
 	}
 
 	async getSession(sessionId: string): Promise<AiSession | null> {
 		const session = await this.config.sdk.sessions.get({ sessionId });
-		return session ? this.toAiSession(session) : null;
+		return session ? this.convertToLocalSession(session) : null;
 	}
 
 	async closeSession(sessionId: string): Promise<void> {
@@ -51,7 +51,7 @@ export class OpenCodeClient extends BaseAiClient {
 			sessionId: input.sessionId,
 			limit: input.limit,
 		});
-		return messages.map((message) => this.toAiMessage(message));
+		return messages.map((message) => this.convertToLocalMessage(message));
 	}
 
 	async sendMessage(input: SendMessageInput): Promise<AiMessage> {
@@ -61,14 +61,30 @@ export class OpenCodeClient extends BaseAiClient {
 			content: input.content,
 			metadata: input.metadata,
 		});
-		return this.toAiMessage(message);
+		return this.convertToLocalMessage(message);
 	}
 
-	private toAiSession(
+	async requestStop(sessionId: string): Promise<void> {
+		void sessionId;
+		throw new Error("OpenCode session control not supported");
+	}
+
+	async pauseSession(sessionId: string): Promise<void> {
+		void sessionId;
+		throw new Error("OpenCode session control not supported");
+	}
+
+	async resumeSession(sessionId: string): Promise<void> {
+		void sessionId;
+		throw new Error("OpenCode session control not supported");
+	}
+
+	private convertToLocalSession(
 		session: OpenCodeSession,
 		fallbackScope?: AiSessionScope,
 	): AiSession {
 		const scope = this.scopeFromMetadata(session.metadata) ?? fallbackScope;
+
 		return {
 			id: session.id,
 			service: this.service,
@@ -80,7 +96,7 @@ export class OpenCodeClient extends BaseAiClient {
 		};
 	}
 
-	private toAiMessage(message: OpenCodeMessage): AiMessage {
+	private convertToLocalMessage(message: OpenCodeMessage): AiMessage {
 		return {
 			id: message.id,
 			role: message.role,

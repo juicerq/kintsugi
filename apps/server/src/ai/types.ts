@@ -2,6 +2,14 @@ export type AiServiceName = "claude" | "opencode";
 
 export type AiRole = "system" | "user" | "assistant" | "tool";
 
+export type AiSessionStatus =
+	| "idle"
+	| "running"
+	| "paused"
+	| "stopped"
+	| "failed"
+	| "completed";
+
 export type AiSessionScope = {
 	projectId?: string;
 	repoPath?: string;
@@ -13,9 +21,14 @@ export type AiSession = {
 	id: string;
 	service: AiServiceName;
 	title?: string;
+	model?: string;
 	createdAt?: string;
 	scope?: AiSessionScope;
 	metadata?: Record<string, string>;
+	status?: AiSessionStatus;
+	stopRequested?: boolean;
+	lastHeartbeatAt?: string;
+	lastError?: string;
 	raw?: unknown;
 };
 
@@ -30,6 +43,7 @@ export type AiMessage = {
 
 export type CreateSessionInput = {
 	title?: string;
+	model?: string;
 	scope?: AiSessionScope;
 	metadata?: Record<string, string>;
 };
@@ -60,69 +74,10 @@ export interface AiClient {
 	closeSession(sessionId: string): Promise<void>;
 	getMessages(input: GetMessagesInput): Promise<AiMessage[]>;
 	sendMessage(input: SendMessageInput): Promise<AiMessage>;
+	requestStop(sessionId: string): Promise<void>;
+	pauseSession(sessionId: string): Promise<void>;
+	resumeSession(sessionId: string): Promise<void>;
 }
-
-export type ClaudeCodeSession = {
-	id: string;
-	title?: string;
-	createdAt?: string;
-	metadata?: Record<string, string>;
-};
-
-export type ClaudeCodeMessage = {
-	id: string;
-	role: AiRole;
-	content: string;
-	createdAt?: string;
-	metadata?: Record<string, string>;
-};
-
-export type ClaudeCodeSessionCreateInput = {
-	title?: string;
-	metadata?: Record<string, string>;
-};
-
-export type ClaudeCodeSessionListInput = {
-	limit?: number;
-	metadata?: Record<string, string>;
-};
-
-export type ClaudeCodeSessionGetInput = {
-	sessionId: string;
-};
-
-export type ClaudeCodeSessionCloseInput = {
-	sessionId: string;
-};
-
-export type ClaudeCodeMessageListInput = {
-	sessionId: string;
-	limit?: number;
-};
-
-export type ClaudeCodeMessageSendInput = {
-	sessionId: string;
-	role: AiRole;
-	content: string;
-	metadata?: Record<string, string>;
-};
-
-export type ClaudeCodeSdk = {
-	sessions: {
-		create(input: ClaudeCodeSessionCreateInput): Promise<ClaudeCodeSession>;
-		list(input?: ClaudeCodeSessionListInput): Promise<ClaudeCodeSession[]>;
-		get(input: ClaudeCodeSessionGetInput): Promise<ClaudeCodeSession | null>;
-		close(input: ClaudeCodeSessionCloseInput): Promise<void>;
-	};
-	messages: {
-		list(input: ClaudeCodeMessageListInput): Promise<ClaudeCodeMessage[]>;
-		send(input: ClaudeCodeMessageSendInput): Promise<ClaudeCodeMessage>;
-	};
-};
-
-export type ClaudeCodeClientConfig = {
-	sdk: ClaudeCodeSdk;
-};
 
 export type OpenCodeSession = {
 	id: string;
@@ -188,6 +143,6 @@ export type OpenCodeClientConfig = {
 };
 
 export type AiServiceConfigMap = {
-	claude: ClaudeCodeClientConfig;
+	claude: import("./services/claude-code").ClaudeCodeClientConfig;
 	opencode: OpenCodeClientConfig;
 };

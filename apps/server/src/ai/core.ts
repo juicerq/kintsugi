@@ -28,6 +28,9 @@ export abstract class BaseAiClient implements AiClient {
 	abstract closeSession(sessionId: string): Promise<void>;
 	abstract getMessages(input: GetMessagesInput): Promise<AiMessage[]>;
 	abstract sendMessage(input: SendMessageInput): Promise<AiMessage>;
+	abstract requestStop(sessionId: string): Promise<void>;
+	abstract pauseSession(sessionId: string): Promise<void>;
+	abstract resumeSession(sessionId: string): Promise<void>;
 
 	protected mergeMetadata(
 		scope: AiSessionScope | undefined,
