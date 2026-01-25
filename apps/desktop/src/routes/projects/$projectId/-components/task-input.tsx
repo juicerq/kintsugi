@@ -66,7 +66,7 @@ export function TaskInput({ projectId }: TaskInputProps) {
 	return (
 		<div
 			ref={containerRef}
-			className={`mb-6 rounded-md transition-colors ${expanded ? "-m-3 border border-white/10 bg-white/[0.03] p-3" : ""}`}
+			className={`mb-6 rounded-md transition-colors ${expanded ? "-m-3 border border-white/10 bg-white/3 p-3" : ""}`}
 			onBlur={handleBlur}
 		>
 			<Input
@@ -93,7 +93,7 @@ export function TaskInput({ projectId }: TaskInputProps) {
 							placeholder="Add more details..."
 							value={description}
 							onChange={(e) => setDescription(e.target.value)}
-							className="placeholder:text-muted-foreground dark:bg-input/30 border-input min-h-[72px] w-full resize-none rounded-md border bg-transparent px-3 py-2 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+							className="placeholder:text-muted-foreground dark:bg-input/30 border-input min-h-[72px] w-full resize-none rounded-md border bg-transparent px-3 py-2 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 placeholder:text-xs"
 						/>
 						<Text size="sm" variant="muted" className="mb-1.5 mt-4">
 							Branch

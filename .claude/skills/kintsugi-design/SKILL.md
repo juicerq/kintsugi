@@ -7,6 +7,11 @@ description: Use when implementing UI components, pages, or styling in Kintsugi 
 
 ## Overview
 
+Desktop application deeply inspired by **Raycast** and **Resend**.
+
+- **Raycast influence**: Command palette aesthetic, spotlight-style window, minimal chrome, snappy transitions
+- **Resend influence**: Ultra-clean dark UI, sophisticated use of white opacity layers, understated elegance, developer-focused clarity
+
 Dark-first task management UI with minimal chrome. Focus on content density and clear visual hierarchy through subtle opacity variations and spacing.
 
 ## Color System

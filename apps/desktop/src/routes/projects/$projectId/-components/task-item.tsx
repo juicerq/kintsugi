@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { Check, X } from "lucide-react";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
@@ -36,11 +37,15 @@ export function TaskItem({ task }: TaskItemProps) {
 	const isCompleted = task.completed_at !== null;
 	const allSubtasksComplete = task.total_subtasks > 0 && task.completed_subtasks === task.total_subtasks;
 
-	function handleCheckboxClick() {
+	function handleCheckboxClick(e: React.MouseEvent) {
+		e.preventDefault();
+		e.stopPropagation();
 		toggleComplete.mutate({ id: task.id });
 	}
 
-	function handleDeleteClick() {
+	function handleDeleteClick(e: React.MouseEvent) {
+		e.preventDefault();
+		e.stopPropagation();
 		if (!pendingDelete) {
 			setPendingDelete(true);
 			return;
@@ -49,7 +54,9 @@ export function TaskItem({ task }: TaskItemProps) {
 	}
 
 	return (
-		<div
+		<Link
+			to="/tasks/$taskId"
+			params={{ taskId: task.id }}
 			className="group -mx-2 flex items-center gap-3 rounded-md border border-transparent px-2 py-2 transition-colors hover:border-white/10 hover:bg-white/[0.02]"
 			onMouseLeave={() => setPendingDelete(false)}
 		>
@@ -103,6 +110,6 @@ export function TaskItem({ task }: TaskItemProps) {
 					<X className="h-3 w-3" />
 				)}
 			</Button>
-		</div>
+		</Link>
 	);
 }

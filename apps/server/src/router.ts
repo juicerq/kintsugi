@@ -5,6 +5,7 @@ import type { Database } from "./db/types";
 import { db } from "./db";
 import { createProjectsRepository } from "./db/repositories/projects";
 import { createTasksRepository } from "./db/repositories/tasks";
+import { createSubtasksRepository } from "./db/repositories/subtasks";
 
 const t = initTRPC.create();
 
@@ -31,11 +32,29 @@ const schemas = {
   deleteTask: z.object({
     id: z.string().uuid(),
   }),
+  getTask: z.object({
+    id: z.string().uuid(),
+  }),
+  updateTask: z.object({
+    id: z.string().uuid(),
+    brainstorm: z.string().nullable().optional(),
+    architecture: z.string().nullable().optional(),
+    review: z.string().nullable().optional(),
+  }),
+  listSubtasks: z.object({
+    taskId: z.string().uuid(),
+  }),
+  updateSubtask: z.object({
+    id: z.string().uuid(),
+    status: z.enum(["waiting", "in_progress", "completed"]).optional(),
+    should_commit: z.boolean().optional(),
+  }),
 } as const;
 
 export function createAppRouter(database: Kysely<Database>) {
   const projectsRepo = createProjectsRepository(database);
   const tasksRepo = createTasksRepository(database);
+  const subtasksRepo = createSubtasksRepository(database);
 
   return router({
     greet: publicProcedure
@@ -64,6 +83,10 @@ export function createAppRouter(database: Kysely<Database>) {
         .input(schemas.listTasks)
         .query(({ input }) => tasksRepo.listByProjectWithSubtaskCounts(input.projectId)),
 
+      get: publicProcedure
+        .input(schemas.getTask)
+        .query(({ input }) => tasksRepo.findById(input.id)),
+
       create: publicProcedure
         .input(schemas.createTask)
         .mutation(({ input }) => {
@@ -77,6 +100,13 @@ export function createAppRouter(database: Kysely<Database>) {
           });
         }),
 
+      update: publicProcedure
+        .input(schemas.updateTask)
+        .mutation(({ input }) => {
+          const { id, ...data } = input;
+          return tasksRepo.update(id, data);
+        }),
+
       toggleComplete: publicProcedure
         .input(schemas.toggleTaskComplete)
         .mutation(({ input }) => tasksRepo.toggleComplete(input.id)),
@@ -84,6 +114,22 @@ export function createAppRouter(database: Kysely<Database>) {
       delete: publicProcedure
         .input(schemas.deleteTask)
         .mutation(({ input }) => tasksRepo.delete(input.id)),
+    }),
+
+    subtasks: router({
+      list: publicProcedure
+        .input(schemas.listSubtasks)
+        .query(({ input }) => subtasksRepo.listByTask(input.taskId)),
+
+      update: publicProcedure
+        .input(schemas.updateSubtask)
+        .mutation(({ input }) => {
+          const { id, should_commit, ...rest } = input;
+          return subtasksRepo.update(id, {
+            ...rest,
+            should_commit: should_commit !== undefined ? (should_commit ? 1 : 0) : undefined,
+          });
+        }),
     }),
   });
 }

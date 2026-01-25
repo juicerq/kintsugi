@@ -9,6 +9,14 @@ interface BreadcrumbSegment {
 function useBreadcrumbs(pathname: string): BreadcrumbSegment[] {
 	const [projects] = trpc.projects.list.useSuspenseQuery();
 
+	const taskMatch = pathname.match(/^\/tasks\/([^/]+)/);
+	const taskId = taskMatch?.[1] ?? null;
+
+	const { data: task } = trpc.tasks.get.useQuery(
+		{ id: taskId! },
+		{ enabled: !!taskId }
+	);
+
 	const segments: BreadcrumbSegment[] = [{ label: "Kintsugi", href: "/" }];
 
 	if (pathname === "/") {
@@ -24,6 +32,19 @@ function useBreadcrumbs(pathname: string): BreadcrumbSegment[] {
 
 		segments.push({ label: projectName, href: "/" });
 		segments.push({ label: "Tasks" });
+		return segments;
+	}
+
+	if (taskMatch && task) {
+		const project = projects.find((p) => p.id === task.project_id);
+		const projectName = project?.name ?? "Project";
+
+		segments.push({ label: projectName, href: "/" });
+		segments.push({
+			label: "Tasks",
+			href: `/projects/${task.project_id}`,
+		});
+		segments.push({ label: task.title });
 	}
 
 	return segments;
@@ -34,7 +55,7 @@ export function Breadcrumbs() {
 	const segments = useBreadcrumbs(location.pathname);
 
 	return (
-		<nav className="flex items-center gap-2 text-sm">
+		<nav className="flex items-center gap-2 text-sm border-b p-3 w-full">
 			{segments.map((seg, i) => (
 				<span key={i} className="flex items-center gap-2">
 					{i > 0 && <span className="text-muted-foreground">/</span>}
