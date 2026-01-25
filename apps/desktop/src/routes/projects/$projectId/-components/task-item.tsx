@@ -50,14 +50,14 @@ export function TaskItem({ task }: TaskItemProps) {
 
 	return (
 		<div
-			className="group flex items-center gap-3 py-2 px-1"
+			className="group -mx-2 flex items-center gap-3 rounded-md border border-transparent px-2 py-2 transition-colors hover:border-white/10 hover:bg-white/[0.02]"
 			onMouseLeave={() => setPendingDelete(false)}
 		>
 			<button
 				type="button"
 				onClick={handleCheckboxClick}
 				className={cn(
-					"flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors",
+					"flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border transition-colors",
 					isCompleted
 						? "border-white/20 bg-white/10"
 						: "border-white/20 hover:border-white/40"
@@ -94,7 +94,7 @@ export function TaskItem({ task }: TaskItemProps) {
 				onBlur={() => setPendingDelete(false)}
 				className={cn(
 					"opacity-0 group-hover:opacity-100 transition-opacity",
-					pendingDelete && "opacity-100 text-red-400 hover:text-red-300"
+					pendingDelete && "opacity-100 bg-red-500/20 text-red-700 hover:bg-red-500/30 hover:text-red-600"
 				)}
 			>
 				{pendingDelete ? (

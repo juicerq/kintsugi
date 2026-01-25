@@ -22,6 +22,8 @@ const schemas = {
   createTask: z.object({
     projectId: z.string().uuid(),
     title: z.string().min(1),
+    description: z.string().optional(),
+    branchName: z.string().optional(),
   }),
   toggleTaskComplete: z.object({
     id: z.string().uuid(),
@@ -70,6 +72,8 @@ export function createAppRouter(database: Kysely<Database>) {
             id,
             project_id: input.projectId,
             title: input.title,
+            description: input.description,
+            branch_name: input.branchName,
           });
         }),
 
