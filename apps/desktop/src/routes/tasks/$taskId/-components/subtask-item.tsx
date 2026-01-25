@@ -6,7 +6,6 @@ import {
 	Copy,
 	FileText,
 	FlaskConical,
-	LucideIcon,
 	Pause,
 	Play,
 	RefreshCw,
