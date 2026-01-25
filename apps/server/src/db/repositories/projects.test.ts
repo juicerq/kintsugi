@@ -3,11 +3,11 @@ import { createTestDb, createProject } from "../../../test/helpers";
 import { createProjectsRepository } from "./projects";
 
 describe("ProjectsRepository", () => {
-  let db: ReturnType<typeof createTestDb>;
+  let db: Awaited<ReturnType<typeof createTestDb>>;
   let projects: ReturnType<typeof createProjectsRepository>;
 
-  beforeEach(() => {
-    db = createTestDb();
+  beforeEach(async () => {
+    db = await createTestDb();
     projects = createProjectsRepository(db);
   });
 

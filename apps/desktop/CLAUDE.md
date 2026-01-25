@@ -91,6 +91,24 @@ No Tauri invoke commands - all communication goes through tRPC.
 - tRPC for all server communication
 - Providers go in `__root.tsx`
 
+### UI Text
+
+All UI text must be in **English** and as **short as possible** while maintaining clarity:
+
+```tsx
+// ✅ CORRECT
+"New Task"
+"Delete this?"
+"No tasks yet"
+"Saved"
+
+// ❌ WRONG
+"Click here to create a new task"
+"Are you sure you want to delete this item?"
+"No tasks have been created yet"
+"Successfully saved"
+```
+
 ### Tipografia
 
 **SEMPRE** usar `<Title>` e `<Text>` ao invés de `<h1>`, `<p>` com classes manuais:
@@ -111,14 +129,41 @@ import { Text } from "@/components/ui/text"
 ```
 
 **Title** - para títulos e headings:
-- `size`: `xl` (20px), `lg` (16px), `default` (13px), `sm` (12px)
+- `variant`: `default` (white/90), `muted` (white/50 - completed/disabled)
+- `size`: `xl` (19px), `lg` (15px), `default` (12px), `sm` (11px)
 - `asChild`: renderiza como outro elemento (`<Title asChild><h1>...</h1></Title>`)
 
-**Text** - para texto corrido:
-- `variant`: `primary` (white/90), `default` (white/70), `muted` (white/50), `faint` (white/40)
-- `size`: `default` (13px), `sm` (12px), `xs` (11px), `xxs` (10px)
+**Text** - para texto corrido (hierarquia do mais sutil ao mais forte):
+| Variant     | Opacity | Uso                                    |
+|-------------|---------|----------------------------------------|
+| `label`     | 35%     | Section headers (Steps, Details, Task) |
+| `faint`     | 40%     | IDs, timestamps, metadata              |
+| `muted`     | 50%     | Texto secundário, placeholders         |
+| `secondary` | 60%     | Steps, conteúdo expandido              |
+| `default`   | 70%     | Corpo principal                        |
+| `primary`   | 90%     | Títulos, texto de destaque             |
+
+- `size`: `default` (12px), `sm` (11px), `xs` (10px), `xxs` (9px)
 - `weight`: `normal`, `medium`
 - `asChild`: renderiza como outro elemento
+
+**Badge** - para status, categorias, tags (estilo pill 9px uppercase):
+| Variant   | Cor                          | Uso                    |
+|-----------|------------------------------|------------------------|
+| `default` | white/10 + white/40          | Neutro, waiting        |
+| `sky`     | sky-500/15 + sky-400         | Code                   |
+| `violet`  | violet-500/15 + violet-400   | Test                   |
+| `indigo`  | indigo-500/15 + indigo-400   | Docs                   |
+| `rose`    | rose-500/15 + rose-400       | Fix                    |
+| `emerald` | emerald-500/15 + emerald-400 | Refactor, completed    |
+| `amber`   | amber-500/15 + amber-400     | In progress, warning   |
+
+```tsx
+<Badge variant="sky">
+  <Code className="h-2.5 w-2.5" />
+  Code
+</Badge>
+```
 
 - **Evitar ternários** - preferir `&&` para renderização condicional:
 

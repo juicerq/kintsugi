@@ -1,29 +1,12 @@
-import { Check } from "lucide-react";
+import { Check, Code, FlaskConical, FileText, Wrench, RefreshCw } from "lucide-react";
+import { Badge, type badgeVariants } from "@/components/ui/badge";
 import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
 import { trpc } from "../../../../trpc";
 import { SubtaskDetails } from "./subtask-details";
 import { AnimatePresence, motion } from "motion/react";
-
-export type SubtaskCategory = "code" | "test" | "docs" | "fix" | "refactor";
-export type SubtaskStatus = "waiting" | "in_progress" | "completed";
-
-interface Subtask {
-  id: string;
-  task_id: string;
-  name: string;
-  acceptance_criterias: string | null;
-  out_of_scope: string | null;
-  category: SubtaskCategory | null;
-  status: SubtaskStatus;
-  started_at: string | null;
-  finished_at: string | null;
-  should_commit: number;
-  key_decisions: string | null;
-  files: string | null;
-  notes: string | null;
-  index: number;
-}
+import type { VariantProps } from "class-variance-authority";
+import type { Subtask, SubtaskCategory, SubtaskStatus } from "./types";
 
 interface SubtaskItemProps {
   subtask: Subtask;
@@ -31,24 +14,20 @@ interface SubtaskItemProps {
   onToggle: () => void;
 }
 
-const categoryColors: Record<SubtaskCategory, string> = {
-  code: "bg-purple-500/20 text-purple-400",
-  test: "bg-blue-500/20 text-blue-400",
-  docs: "bg-cyan-500/20 text-cyan-400",
-  fix: "bg-red-500/20 text-red-400",
-  refactor: "bg-orange-500/20 text-orange-400",
+type BadgeVariant = VariantProps<typeof badgeVariants>["variant"];
+
+const categoryConfig: Record<SubtaskCategory, { label: string; icon: React.ReactNode; variant: BadgeVariant }> = {
+  code: { label: "Code", icon: <Code className="h-2.5 w-2.5" />, variant: "sky" },
+  test: { label: "Test", icon: <FlaskConical className="h-2.5 w-2.5" />, variant: "violet" },
+  docs: { label: "Docs", icon: <FileText className="h-2.5 w-2.5" />, variant: "indigo" },
+  fix: { label: "Fix", icon: <Wrench className="h-2.5 w-2.5" />, variant: "rose" },
+  refactor: { label: "Refactor", icon: <RefreshCw className="h-2.5 w-2.5" />, variant: "emerald" },
 };
 
-const statusColors: Record<SubtaskStatus, string> = {
-  waiting: "bg-white/10 text-white/50",
-  in_progress: "bg-blue-500/20 text-blue-400",
-  completed: "bg-green-500/20 text-green-400",
-};
-
-const statusLabels: Record<SubtaskStatus, string> = {
-  waiting: "Waiting",
-  in_progress: "In Progress",
-  completed: "Completed",
+const statusConfig: Record<SubtaskStatus, { label: string; variant: BadgeVariant }> = {
+  waiting: { label: "Waiting", variant: "default" },
+  in_progress: { label: "Active", variant: "amber" },
+  completed: { label: "Completed", variant: "emerald" },
 };
 
 export function SubtaskItem({ subtask, isExpanded, onToggle }: SubtaskItemProps) {
@@ -57,6 +36,7 @@ export function SubtaskItem({ subtask, isExpanded, onToggle }: SubtaskItemProps)
   const updateSubtask = trpc.subtasks.update.useMutation({
     onSuccess: () => {
       utils.subtasks.list.invalidate({ taskId: subtask.task_id });
+      utils.tasks.get.invalidate({ id: subtask.task_id });
     },
   });
 
@@ -70,72 +50,60 @@ export function SubtaskItem({ subtask, isExpanded, onToggle }: SubtaskItemProps)
     });
   }
 
-  function handleCommitToggle(e: React.MouseEvent) {
-    e.stopPropagation();
-    updateSubtask.mutate({
-      id: subtask.id,
-      should_commit: !subtask.should_commit,
-    });
-  }
+  const config = subtask.category ? categoryConfig[subtask.category] : null;
 
   return (
-    <div>
+    <div
+      className={cn(
+        "group rounded-md transition-colors p-1",
+        "hover:bg-white/[0.03]",
+        isExpanded && "bg-white/[0.04]"
+      )}
+    >
       <div
         onClick={onToggle}
-        className="group flex items-center gap-3 rounded-md border border-transparent px-2 py-2 transition-colors hover:border-white/10 hover:bg-white/[0.02] cursor-pointer"
+        className="flex items-center gap-2 py-1.5 pr-1 cursor-pointer"
       >
         <button
           type="button"
           onClick={handleCheckboxClick}
           className={cn(
-            "flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border transition-colors",
+            "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm border transition-all duration-150 ease-out active:scale-90",
             isCompleted
-              ? "border-white/20 bg-white/10"
-              : "border-white/20 hover:border-white/40"
+              ? "border-white/50 bg-white/50"
+              : "border-white/25 hover:border-white/40"
           )}
         >
-          {isCompleted && <Check className="h-3 w-3 text-white/60" />}
+          {isCompleted && <Check className="h-2 w-2 text-[#0a0a0a]" />}
         </button>
 
-        <Text
-          className={cn("flex-1 min-w-0 truncate", isCompleted && "line-through")}
-          variant={isCompleted ? "muted" : "default"}
-        >
-          {subtask.name}
-        </Text>
-
-        {subtask.category && (
-          <span
+        <div className="flex items-center gap-2 min-w-0">
+          <Text
             className={cn(
-              "px-2 py-0.5 rounded text-xs uppercase font-medium",
-              categoryColors[subtask.category]
+              "truncate transition-all duration-150",
+              isCompleted && "line-through decoration-white/20"
             )}
+            variant={isCompleted ? "faint" : "default"}
           >
-            {subtask.category}
-          </span>
+            {subtask.name}
+          </Text>
+          <Text size="xs" variant="faint" className="shrink-0 font-mono">
+            ST-{subtask.index}
+          </Text>
+        </div>
+
+        <div className="flex-1" />
+
+        {config && (
+          <Badge variant={config.variant}>
+            {config.icon}
+            {config.label}
+          </Badge>
         )}
 
-        <Text size="xs" variant="muted" className="shrink-0">
-          ST-{subtask.index}
-        </Text>
-
-        <button
-          type="button"
-          onClick={handleCommitToggle}
-          className={cn(
-            "flex items-center justify-center w-6 h-6 rounded transition-colors",
-            subtask.should_commit
-              ? "bg-green-500/20 text-green-400"
-              : "bg-white/5 text-white/30 hover:text-white/50"
-          )}
-          title={subtask.should_commit ? "Will commit" : "Won't commit"}
-        >
-          <Check className="h-3 w-3" />
-        </button>
-
-        <span className={cn("px-2 py-0.5 rounded text-xs", statusColors[subtask.status])}>
-          {statusLabels[subtask.status]}
-        </span>
+        <Badge variant={statusConfig[subtask.status].variant}>
+          {statusConfig[subtask.status].label}
+        </Badge>
       </div>
 
       <AnimatePresence>

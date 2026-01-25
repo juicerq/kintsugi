@@ -4,13 +4,13 @@ import { createProjectsRepository } from "./projects";
 import { createTasksRepository } from "./tasks";
 
 describe("TasksRepository", () => {
-  let db: ReturnType<typeof createTestDb>;
+  let db: Awaited<ReturnType<typeof createTestDb>>;
   let projects: ReturnType<typeof createProjectsRepository>;
   let tasks: ReturnType<typeof createTasksRepository>;
   let projectId: string;
 
   beforeEach(async () => {
-    db = createTestDb();
+    db = await createTestDb();
     projects = createProjectsRepository(db);
     tasks = createTasksRepository(db);
 

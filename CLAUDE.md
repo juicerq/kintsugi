@@ -1,6 +1,6 @@
 # Kintsugi
 
-Desktop application built with Tauri 2 + React frontend + Bun tRPC backend.
+Desktop application (900x600) built with Tauri 2 + React frontend + Bun tRPC backend.
 
 ## Philosophy
 
@@ -69,3 +69,8 @@ bun run build          # Full production build
 - Always prefer early returns over nested conditions
 - Avoid `else` blocks whenever possible - use early returns instead
 - Avoid nested ifs - flatten logic with early returns to prevent layers of `{}` that hurt readability
+
+
+## Plan
+
+When creating a plan, always make it concise. Sacrifice grammar for the sake of clarity and conciseness.

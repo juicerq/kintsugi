@@ -1,9 +1,33 @@
-import type { Kysely } from "kysely";
+import type { Insertable, Kysely } from "kysely";
 import { sql } from "kysely";
-import type { Database, SubtaskStatus } from "../types";
+import type { Database, SubtaskCategory, SubtaskStatus, SubtaskTable } from "../types";
+
+type SubtaskCreateData = Insertable<SubtaskTable>;
+
+type SubtaskUpdateData = Partial<{
+  name: string;
+  acceptance_criterias: string | null;
+  out_of_scope: string | null;
+  category: SubtaskCategory | null;
+  status: SubtaskStatus;
+  should_commit: number;
+  key_decisions: string | null;
+  files: string | null;
+  notes: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+}>;
 
 export function createSubtasksRepository(db: Kysely<Database>) {
   return {
+    async findById(id: string) {
+      return await db
+        .selectFrom("subtasks")
+        .where("id", "=", id)
+        .selectAll()
+        .executeTakeFirst();
+    },
+
     async listByTask(taskId: string) {
       return await db
         .selectFrom("subtasks")
@@ -27,16 +51,35 @@ export function createSubtasksRepository(db: Kysely<Database>) {
         .execute();
     },
 
-    async update(
-      id: string,
-      data: Partial<{
-        status: SubtaskStatus;
-        should_commit: number;
-      }>
-    ) {
+    async create(data: SubtaskCreateData) {
+      return await db
+        .insertInto("subtasks")
+        .values(data)
+        .returningAll()
+        .executeTakeFirst();
+    },
+
+    async createMany(subtasks: SubtaskCreateData[]) {
+      if (subtasks.length === 0) return [];
+      return await db
+        .insertInto("subtasks")
+        .values(subtasks)
+        .returningAll()
+        .execute();
+    },
+
+    async update(id: string, data: SubtaskUpdateData) {
       return await db
         .updateTable("subtasks")
         .set(data)
+        .where("id", "=", id)
+        .returningAll()
+        .executeTakeFirst();
+    },
+
+    async delete(id: string) {
+      return await db
+        .deleteFrom("subtasks")
         .where("id", "=", id)
         .returningAll()
         .executeTakeFirst();

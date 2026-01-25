@@ -3,11 +3,11 @@ import { createTestDb } from "../test/helpers";
 import { createAppRouter } from "./router";
 
 describe("AppRouter", () => {
-  let db: ReturnType<typeof createTestDb>;
+  let db: Awaited<ReturnType<typeof createTestDb>>;
   let caller: ReturnType<ReturnType<typeof createAppRouter>["createCaller"]>;
 
-  beforeEach(() => {
-    db = createTestDb();
+  beforeEach(async () => {
+    db = await createTestDb();
     const router = createAppRouter(db);
     caller = router.createCaller({});
   });

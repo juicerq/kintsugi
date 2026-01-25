@@ -4,18 +4,30 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Title Component - Para headings e títulos
+ *
+ * Variants controlam opacidade para estados visuais:
+ * - default: white/90 (normal)
+ * - muted: white/50 (completed/disabled)
+ */
 const titleVariants = cva(
-  "font-medium text-white/90 tracking-[-0.01em] leading-[1.4]",
+  "font-medium tracking-[-0.01em] leading-[1.4]",
   {
     variants: {
+      variant: {
+        default: "text-white/90",
+        muted: "text-white/50",
+      },
       size: {
-        xl: "text-[20px]",
-        lg: "text-[16px]",
-        default: "text-[13px]",
-        sm: "text-[12px]",
+        xl: "text-[19px]",
+        lg: "text-[15px]",
+        default: "text-[12px]",
+        sm: "text-[11px]",
       },
     },
     defaultVariants: {
+      variant: "default",
       size: "default",
     },
   }
@@ -23,6 +35,7 @@ const titleVariants = cva(
 
 function Title({
   className,
+  variant = "default",
   size = "default",
   asChild = false,
   ...props
@@ -35,7 +48,7 @@ function Title({
   return (
     <Comp
       data-slot="title"
-      className={cn(titleVariants({ size, className }))}
+      className={cn(titleVariants({ variant, size, className }))}
       {...props}
     />
   )

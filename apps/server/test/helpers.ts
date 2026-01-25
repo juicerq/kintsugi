@@ -2,16 +2,18 @@ import { Database } from "bun:sqlite";
 import { Kysely } from "kysely";
 import { BunSqliteDialect } from "kysely-bun-sqlite";
 import type { Database as DB } from "../src/db/types";
-import { initSchema } from "../src/db/schema";
+import { runMigrations } from "../src/db/migrations";
 
-export function createTestDb() {
+export async function createTestDb() {
   const sqlite = new Database(":memory:");
   sqlite.run("PRAGMA foreign_keys = ON");
-  initSchema(sqlite);
 
-  return new Kysely<DB>({
+  const db = new Kysely<DB>({
     dialect: new BunSqliteDialect({ database: sqlite }),
   });
+
+  await runMigrations(db);
+  return db;
 }
 
 export function createProject(overrides: Partial<{
@@ -70,8 +72,10 @@ export function createSubtask(taskId: string, overrides: Partial<{
     acceptance_criterias: overrides.acceptance_criterias ?? null,
     out_of_scope: overrides.out_of_scope ?? null,
     category: overrides.category ?? null,
+    status: overrides.status ?? "waiting",
     started_at: overrides.started_at ?? null,
     finished_at: overrides.finished_at ?? null,
+    should_commit: overrides.should_commit ?? 0,
     key_decisions: overrides.key_decisions ?? null,
     files: overrides.files ?? null,
     notes: overrides.notes ?? null,
