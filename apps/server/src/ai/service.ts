@@ -1,23 +1,22 @@
 import { TRPCError } from "@trpc/server";
-import { AiCore } from "../../ai/core";
-import { type ModelKey, modelsMap } from "../../ai/models";
-import { servicesMap } from "../../ai/services";
-import type { AiServiceName, AiSessionScope } from "../../ai/types";
-import { db } from "../../db";
+import { type ModelKey, modelsMap } from "../ai/models";
+import { servicesMap } from "../ai/services";
+import type { AiServiceName, AiSessionScope } from "../ai/types";
+import { db } from "../db";
+import { AiCore } from "./core";
 
 const aiCore = new AiCore(servicesMap, {
 	claude: { db },
 	opencode: {
 		sdk: {
-			sessions: {
+			session: {
 				create: () => Promise.reject(new Error("OpenCode SDK not configured")),
 				list: () => Promise.reject(new Error("OpenCode SDK not configured")),
 				get: () => Promise.reject(new Error("OpenCode SDK not configured")),
-				close: () => Promise.reject(new Error("OpenCode SDK not configured")),
-			},
-			messages: {
-				list: () => Promise.reject(new Error("OpenCode SDK not configured")),
-				send: () => Promise.reject(new Error("OpenCode SDK not configured")),
+				abort: () => Promise.reject(new Error("OpenCode SDK not configured")),
+				messages: () =>
+					Promise.reject(new Error("OpenCode SDK not configured")),
+				prompt: () => Promise.reject(new Error("OpenCode SDK not configured")),
 			},
 		},
 	},
@@ -25,6 +24,7 @@ const aiCore = new AiCore(servicesMap, {
 
 function resolveModelId(modelKey: ModelKey, service: AiServiceName): string {
 	const entry = modelsMap[modelKey];
+
 	if (!entry) {
 		throw new TRPCError({
 			code: "BAD_REQUEST",
@@ -33,6 +33,7 @@ function resolveModelId(modelKey: ModelKey, service: AiServiceName): string {
 	}
 
 	const modelId = entry[service];
+
 	if (!modelId) {
 		throw new TRPCError({
 			code: "BAD_REQUEST",
@@ -98,6 +99,7 @@ type SendMessageParams = {
 export namespace AiService {
 	export function createSession(params: CreateSessionParams) {
 		const modelId = resolveModelId(params.modelKey, params.service);
+
 		const client = aiCore.getClient(params.service);
 
 		return client.createSession({
@@ -119,6 +121,7 @@ export namespace AiService {
 
 	export async function getSession(params: GetSessionParams) {
 		const client = aiCore.getClient(params.service);
+
 		const session = await client.getSession(params.sessionId);
 
 		if (!session) {
@@ -133,21 +136,25 @@ export namespace AiService {
 
 	export function closeSession(params: CloseSessionParams) {
 		const client = aiCore.getClient(params.service);
+
 		return client.closeSession(params.sessionId);
 	}
 
 	export function pauseSession(params: PauseSessionParams) {
 		const client = aiCore.getClient(params.service);
+
 		return client.pauseSession(params.sessionId);
 	}
 
 	export function resumeSession(params: ResumeSessionParams) {
 		const client = aiCore.getClient(params.service);
+
 		return client.resumeSession(params.sessionId);
 	}
 
 	export function stopSession(params: StopSessionParams) {
 		const client = aiCore.getClient(params.service);
+
 		return client.requestStop(params.sessionId);
 	}
 

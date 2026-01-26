@@ -86,16 +86,19 @@ export class ClaudeCodeClient extends BaseAiClient {
 
 	async createSession(input: CreateSessionInput): Promise<AiSession> {
 		const metadata = this.mergeMetadata(input.scope, input.metadata);
+
 		const model = input.model ?? this.config.model;
+
 		if (!model) {
 			throw new Error("Claude Code model not configured");
 		}
 
 		const session = this.createSessionHandler({ model });
 
-		// SDK v2 only exposes session_id after first stream(), so we send an init message
 		await session.send(".");
+
 		let sessionId: string | null = null;
+
 		for await (const message of session.stream()) {
 			if (message.session_id) {
 				sessionId = message.session_id;
@@ -176,9 +179,13 @@ export class ClaudeCodeClient extends BaseAiClient {
 
 	async sendMessage(input: SendMessageInput): Promise<AiMessage> {
 		await this.ensureSessionRunnable(input.sessionId);
+
 		const session = await this.getOrResumeSession(input.sessionId);
+
 		const metadata = this.serializeMetadata(input.metadata);
+
 		const userMessageId = crypto.randomUUID();
+
 		const now = this.now();
 
 		await this.sessionsRepo.updateStatus(input.sessionId, {
@@ -272,6 +279,12 @@ export class ClaudeCodeClient extends BaseAiClient {
 	}
 
 	async pauseSession(sessionId: string): Promise<void> {
+		await this.sendMessage({
+			sessionId,
+			role: "user",
+			content: "Pare e retorne agora.",
+		});
+
 		await this.sessionsRepo.updateStatus(sessionId, {
 			stop_requested: 1,
 			status: "paused",
@@ -287,6 +300,12 @@ export class ClaudeCodeClient extends BaseAiClient {
 			status: "idle",
 			last_error: null,
 			last_heartbeat_at: this.now(),
+		});
+
+		await this.sendMessage({
+			sessionId,
+			role: "user",
+			content: "Continue de onde estava.",
 		});
 	}
 
@@ -342,9 +361,11 @@ export class ClaudeCodeClient extends BaseAiClient {
 		if (status === "paused") {
 			throw new SessionControlError("paused");
 		}
+
 		if (status === "stopped") {
 			throw new SessionControlError("stopped");
 		}
+
 		if (status === "failed") {
 			throw new Error("Session failed");
 		}
@@ -496,21 +517,25 @@ export class ClaudeCodeClient extends BaseAiClient {
 
 		if (row.scope_project_id) {
 			scope.projectId = row.scope_project_id;
+
 			hasValue = true;
 		}
 
 		if (row.scope_repo_path) {
 			scope.repoPath = row.scope_repo_path;
+
 			hasValue = true;
 		}
 
 		if (row.scope_workspace_id) {
 			scope.workspaceId = row.scope_workspace_id;
+
 			hasValue = true;
 		}
 
 		if (row.scope_label) {
 			scope.label = row.scope_label;
+
 			hasValue = true;
 		}
 

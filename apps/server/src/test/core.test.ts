@@ -8,18 +8,18 @@ const MODEL = "claude-3-5-haiku-20241022";
 function createOpenCodeConfig() {
 	return {
 		sdk: {
-			sessions: {
+			session: {
 				create: async () => ({ id: "open-session" }),
 				list: async () => [],
 				get: async () => null,
-				close: async () => {},
-			},
-			messages: {
-				list: async () => [],
-				send: async () => ({
-					id: "open-message",
-					role: "assistant" as const,
-					content: "ok",
+				abort: async () => true,
+				messages: async () => [],
+				prompt: async () => ({
+					info: {
+						id: "open-message",
+						role: "assistant" as const,
+					},
+					parts: [{ type: "text", text: "ok" }],
 				}),
 			},
 		},

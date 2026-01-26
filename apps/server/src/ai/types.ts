@@ -1,3 +1,5 @@
+import type { ClaudeCodeClientConfig } from "./services/claude-code";
+
 export type AiServiceName = "claude" | "opencode";
 
 export type AiRole = "system" | "user" | "assistant" | "tool";
@@ -68,14 +70,23 @@ export type SendMessageInput = {
 
 export interface AiClient {
 	readonly service: AiServiceName;
+
 	createSession(input: CreateSessionInput): Promise<AiSession>;
+
 	listSessions(input?: ListSessionsInput): Promise<AiSession[]>;
+
 	getSession(sessionId: string): Promise<AiSession | null>;
+
 	closeSession(sessionId: string): Promise<void>;
+
 	getMessages(input: GetMessagesInput): Promise<AiMessage[]>;
+
 	sendMessage(input: SendMessageInput): Promise<AiMessage>;
+
 	requestStop(sessionId: string): Promise<void>;
+
 	pauseSession(sessionId: string): Promise<void>;
+
 	resumeSession(sessionId: string): Promise<void>;
 }
 
@@ -86,55 +97,75 @@ export type OpenCodeSession = {
 	metadata?: Record<string, string>;
 };
 
-export type OpenCodeMessage = {
+export type OpenCodePart = {
+	type: string;
+} & Record<string, unknown>;
+
+export type OpenCodeMessageInfo = {
 	id: string;
 	role: AiRole;
-	content: string;
 	createdAt?: string;
 	metadata?: Record<string, string>;
 };
 
+export type OpenCodeMessage = {
+	info: OpenCodeMessageInfo;
+	parts: OpenCodePart[];
+};
+
 export type OpenCodeSessionCreateInput = {
-	title?: string;
-	metadata?: Record<string, string>;
+	body: {
+		title?: string;
+		metadata?: Record<string, string>;
+	};
 };
 
 export type OpenCodeSessionListInput = {
-	limit?: number;
-	metadata?: Record<string, string>;
+	query?: {
+		limit?: number;
+	};
 };
 
 export type OpenCodeSessionGetInput = {
-	sessionId: string;
+	path: {
+		id: string;
+	};
 };
 
-export type OpenCodeSessionCloseInput = {
-	sessionId: string;
+export type OpenCodeSessionAbortInput = {
+	path: {
+		id: string;
+	};
 };
 
-export type OpenCodeMessageListInput = {
-	sessionId: string;
-	limit?: number;
+export type OpenCodeSessionMessagesInput = {
+	path: {
+		id: string;
+	};
 };
 
-export type OpenCodeMessageSendInput = {
-	sessionId: string;
-	role: AiRole;
-	content: string;
-	metadata?: Record<string, string>;
+export type OpenCodeSessionPromptInput = {
+	path: {
+		id: string;
+	};
+	body: {
+		parts: OpenCodePart[];
+		model?: {
+			providerID: string;
+			modelID: string;
+		};
+		noReply?: boolean;
+	};
 };
 
 export type OpenCodeSdk = {
-	sessions: {
+	session: {
 		create(input: OpenCodeSessionCreateInput): Promise<OpenCodeSession>;
 		list(input?: OpenCodeSessionListInput): Promise<OpenCodeSession[]>;
 		get(input: OpenCodeSessionGetInput): Promise<OpenCodeSession | null>;
-		close(input: OpenCodeSessionCloseInput): Promise<void>;
-	};
-
-	messages: {
-		list(input: OpenCodeMessageListInput): Promise<OpenCodeMessage[]>;
-		send(input: OpenCodeMessageSendInput): Promise<OpenCodeMessage>;
+		abort(input: OpenCodeSessionAbortInput): Promise<boolean>;
+		messages(input: OpenCodeSessionMessagesInput): Promise<OpenCodeMessage[]>;
+		prompt(input: OpenCodeSessionPromptInput): Promise<OpenCodeMessage>;
 	};
 };
 
@@ -143,6 +174,6 @@ export type OpenCodeClientConfig = {
 };
 
 export type AiServiceConfigMap = {
-	claude: import("./services/claude-code").ClaudeCodeClientConfig;
+	claude: ClaudeCodeClientConfig;
 	opencode: OpenCodeClientConfig;
 };
