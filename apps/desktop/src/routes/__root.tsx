@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 // import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { Suspense } from "react";
+import { useServerEvents } from "../hooks/use-server-events";
 import { trpc, trpcClient } from "../trpc";
 import { Header } from "./-components/header";
 
@@ -12,6 +13,7 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
+	useServerEvents(queryClient);
 	return (
 		<trpc.Provider client={trpcClient} queryClient={queryClient}>
 			<QueryClientProvider client={queryClient}>

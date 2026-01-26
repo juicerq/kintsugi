@@ -6,6 +6,7 @@ import { createTasksRepository } from "../db/repositories/tasks";
 import type { Database } from "../db/types";
 import { router } from "../lib/trpc";
 import { aiRouter } from "./ai/router";
+import { eventsRouter } from "./events/router";
 import { greetProcedure } from "./greet/procedure";
 import { createProjectsRouter } from "./projects/router";
 import { createSubtasksRouter } from "./subtasks/router";
@@ -22,6 +23,7 @@ export function createAppRouter(database: Kysely<Database>) {
 		tasks: createTasksRouter(tasksRepo),
 		subtasks: createSubtasksRouter(subtasksRepo),
 		ai: aiRouter,
+		events: eventsRouter,
 	});
 }
 

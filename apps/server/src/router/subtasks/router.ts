@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { createSubtasksRepository } from "../../db/repositories/subtasks";
+import { uiEventBus } from "../../events/bus";
 import { publicProcedure, router } from "../../lib/trpc";
 
 const schemas = {
@@ -115,7 +116,7 @@ export function createSubtasksRouter(subtasksRepo: SubtasksRepository) {
 
 		update: publicProcedure
 			.input(schemas.updateSubtask)
-			.mutation(({ input }) => {
+			.mutation(async ({ input }) => {
 				const {
 					id,
 					acceptanceCriterias,
@@ -127,7 +128,7 @@ export function createSubtasksRouter(subtasksRepo: SubtasksRepository) {
 					finishedAt,
 					...rest
 				} = input;
-				return subtasksRepo.update(id, {
+				const updated = await subtasksRepo.update(id, {
 					...rest,
 					acceptance_criterias:
 						acceptanceCriterias !== undefined
@@ -158,6 +159,15 @@ export function createSubtasksRouter(subtasksRepo: SubtasksRepository) {
 					started_at: startedAt !== undefined ? startedAt : undefined,
 					finished_at: finishedAt !== undefined ? finishedAt : undefined,
 				});
+				if (!updated) {
+					return updated;
+				}
+				uiEventBus.publish({
+					type: "subtask.updated",
+					subtaskId: updated.id,
+					taskId: updated.task_id,
+				});
+				return updated;
 			}),
 
 		delete: publicProcedure
