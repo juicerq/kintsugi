@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { safe } from "./safe";
+import { safe } from "../lib/safe";
 
 describe("safe", () => {
 	test("returns Ok with value on success", async () => {

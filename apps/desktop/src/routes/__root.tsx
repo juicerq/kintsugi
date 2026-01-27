@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 // import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { Suspense } from "react";
+import { useServerEvents } from "../hooks/use-server-events";
 import { trpc, trpcClient } from "../trpc";
 import { Header } from "./-components/header";
 
@@ -15,6 +16,7 @@ function RootComponent() {
 	return (
 		<trpc.Provider client={trpcClient} queryClient={queryClient}>
 			<QueryClientProvider client={queryClient}>
+				<ServerEventsBoundary />
 				<main className="min-h-screen bg-background relative before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(ellipse_120%_80%_at_0%_0%,rgba(255,255,255,0.05),transparent_50%)] after:pointer-events-none after:absolute after:inset-0 after:bg-[radial-gradient(ellipse_100%_70%_at_100%_100%,rgba(0,0,0,0.05),transparent_50%)]">
 					<Header />
 					<Suspense
@@ -31,4 +33,9 @@ function RootComponent() {
 			</QueryClientProvider>
 		</trpc.Provider>
 	);
+}
+
+function ServerEventsBoundary() {
+	useServerEvents(queryClient);
+	return null;
 }

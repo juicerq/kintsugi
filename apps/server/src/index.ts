@@ -1,8 +1,11 @@
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { appRouter } from "./router";
+import { applyWSSHandler } from "@trpc/server/adapters/ws";
+import { WebSocketServer } from "ws";
 import "./db";
+import { appRouter } from "./router";
 
 const PORT = 3001;
+const WS_PORT = 3002;
 const ALLOWED_ORIGINS = ["http://localhost:1420", "tauri://localhost"];
 
 function getCorsHeaders(origin: string | null) {
@@ -50,6 +53,14 @@ Bun.serve({
 			headers: corsHeaders,
 		});
 	},
+});
+
+const wss = new WebSocketServer({ port: WS_PORT });
+
+applyWSSHandler({
+	wss,
+	router: appRouter,
+	createContext: () => ({}),
 });
 
 console.log(`kintsugi-server listening on http://localhost:${PORT}`);

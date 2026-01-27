@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import { createProjectsRepository } from "../db/repositories/projects";
+import { createSubtasksRepository } from "../db/repositories/subtasks";
+import { createTasksRepository } from "../db/repositories/tasks";
 import {
 	createProject,
 	createSubtask,
 	createTask,
 	createTestDb,
-} from "../../../test/helpers";
-import { createProjectsRepository } from "./projects";
-import { createSubtasksRepository } from "./subtasks";
-import { createTasksRepository } from "./tasks";
+} from "./helpers";
 
 describe("SubtasksRepository", () => {
 	let db: Awaited<ReturnType<typeof createTestDb>>;
