@@ -1,6 +1,14 @@
 import { useNavigate } from "@tanstack/react-router";
-import { BookOpen, Check, GitBranch, Lightbulb, Search } from "lucide-react";
+import {
+	BookOpen,
+	Check,
+	ChevronDown,
+	GitBranch,
+	Lightbulb,
+	Search,
+} from "lucide-react";
 import { motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Text } from "@/components/ui/text";
 import { Title } from "@/components/ui/title";
@@ -8,6 +16,13 @@ import { cn } from "@/lib/utils";
 import { trpc } from "../../../../trpc";
 
 type WorkflowStep = "brainstorm" | "architecture" | "review";
+type ModelKey = "opus-4.5" | "sonnet-4.5" | "haiku-4.5";
+
+const modelOptions: { key: ModelKey; label: string }[] = [
+	{ key: "opus-4.5", label: "Opus 4.5" },
+	{ key: "sonnet-4.5", label: "Sonnet 4.5" },
+	{ key: "haiku-4.5", label: "Haiku 4.5" },
+];
 
 const workflowSteps: {
 	key: WorkflowStep;
@@ -59,11 +74,11 @@ export function TaskHeader({
 		toggleComplete.mutate({ id: task.id });
 	}
 
-	function handleWorkflowStep(step: WorkflowStep) {
+	function handleWorkflowStep(step: WorkflowStep, model: ModelKey) {
 		navigate({
 			to: "/workflow/$taskId",
 			params: { taskId: task.id },
-			search: { step },
+			search: { step, model },
 		});
 	}
 
@@ -116,24 +131,83 @@ export function TaskHeader({
 				)}
 
 				<div className="ml-auto flex items-center gap-1.5">
-					{workflowSteps.map((step) => {
-						const Icon = step.icon;
-						const hasContent = task[step.key] !== null;
-
-						return (
-							<Badge
-								key={step.key}
-								variant={hasContent ? step.variant : "default"}
-								onClick={() => handleWorkflowStep(step.key)}
-								className="cursor-pointer gap-1.5 rounded-md py-1 px-2 hover:bg-white/10 active:bg-white/15"
-							>
-								<Icon className="h-3 w-3" />
-								{step.label}
-							</Badge>
-						);
-					})}
+					{workflowSteps.map((step) => (
+						<WorkflowStepButton
+							key={step.key}
+							step={step}
+							hasContent={task[step.key] !== null}
+							onSelect={(model) => handleWorkflowStep(step.key, model)}
+						/>
+					))}
 				</div>
 			</div>
+		</div>
+	);
+}
+
+interface WorkflowStepButtonProps {
+	step: (typeof workflowSteps)[number];
+	hasContent: boolean;
+	onSelect: (model: ModelKey) => void;
+}
+
+function WorkflowStepButton({
+	step,
+	hasContent,
+	onSelect,
+}: WorkflowStepButtonProps) {
+	const [open, setOpen] = useState(false);
+	const ref = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if (!open) return;
+
+		function handleClickOutside(e: MouseEvent) {
+			if (ref.current && !ref.current.contains(e.target as Node)) {
+				setOpen(false);
+			}
+		}
+
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, [open]);
+
+	const Icon = step.icon;
+
+	return (
+		<div ref={ref} className="relative">
+			<Badge
+				variant={hasContent ? step.variant : "default"}
+				onClick={() => setOpen((o) => !o)}
+				className="cursor-pointer gap-1 rounded-md py-1 px-2 hover:bg-white/10 active:bg-white/15"
+			>
+				<Icon className="h-3 w-3" />
+				{step.label}
+				<ChevronDown
+					className={cn(
+						"h-2.5 w-2.5 opacity-50 transition-transform",
+						open && "rotate-180",
+					)}
+				/>
+			</Badge>
+
+			{open && (
+				<div className="absolute right-0 top-full mt-1 z-50 min-w-[140px] rounded-md border border-white/10 bg-[#1a1a1a] py-1 shadow-xl">
+					{modelOptions.map((model) => (
+						<button
+							key={model.key}
+							type="button"
+							onClick={() => {
+								setOpen(false);
+								onSelect(model.key);
+							}}
+							className="flex w-full items-center px-3 py-1.5 text-[11px] text-white/70 hover:bg-white/10 hover:text-white/90 transition-colors"
+						>
+							{model.label}
+						</button>
+					))}
+				</div>
+			)}
 		</div>
 	);
 }

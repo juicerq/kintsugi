@@ -19,9 +19,12 @@ const stepMeta: Record<
 	review: { label: "Review", icon: Search, variant: "emerald" },
 };
 
+type ModelKey = "opus-4.5" | "sonnet-4.5" | "haiku-4.5";
+
 export const Route = createFileRoute("/workflow/$taskId")({
 	validateSearch: (search: Record<string, unknown>) => ({
 		step: (search.step as WorkflowStep) ?? "brainstorm",
+		model: (search.model as ModelKey) ?? "sonnet-4.5",
 	}),
 	component: WorkflowPage,
 });
@@ -34,7 +37,7 @@ type ChatMessage = {
 
 function WorkflowPage() {
 	const { taskId } = Route.useParams();
-	const { step } = Route.useSearch();
+	const { step, model } = Route.useSearch();
 
 	const [task] = trpc.tasks.get.useSuspenseQuery({ id: taskId });
 	const [projects] = trpc.projects.list.useSuspenseQuery();
@@ -68,7 +71,7 @@ function WorkflowPage() {
 
 				const session = await createSession.mutateAsync({
 					service: "claude",
-					modelKey: "sonnet-4.5",
+					modelKey: model,
 					title: `${step}: ${task!.title}`,
 					scope: {
 						projectId: task!.project_id,
@@ -179,6 +182,10 @@ function WorkflowPage() {
 						{task.title}
 					</Title>
 				</div>
+
+				<Badge variant="default" className="py-1 px-2">
+					{model}
+				</Badge>
 
 				<Badge variant={meta.variant} className="gap-1.5 py-1 px-2">
 					<Icon className="h-3 w-3" />
