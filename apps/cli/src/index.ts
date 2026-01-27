@@ -18,7 +18,10 @@ async function query(path: string, input?: unknown): Promise<unknown> {
 	const body = (await res.json()) as TrpcResult;
 
 	if (!res.ok || body.error) {
-		const msg = body.error?.json?.message ?? body.error?.message ?? `Request failed: ${res.status}`;
+		const msg =
+			body.error?.json?.message ??
+			body.error?.message ??
+			`Request failed: ${res.status}`;
 		throw new Error(msg);
 	}
 
@@ -37,7 +40,10 @@ async function mutate(path: string, input?: unknown): Promise<unknown> {
 	const body = (await res.json()) as TrpcResult;
 
 	if (!res.ok || body.error) {
-		const msg = body.error?.json?.message ?? body.error?.message ?? `Request failed: ${res.status}`;
+		const msg =
+			body.error?.json?.message ??
+			body.error?.message ??
+			`Request failed: ${res.status}`;
 		throw new Error(msg);
 	}
 
@@ -144,7 +150,10 @@ function formatStatus(status: string): string {
 	return `${color}[${status}]\x1b[0m`;
 }
 
-const commands: Record<string, Record<string, (args: string[]) => Promise<void>>> = {
+const commands: Record<
+	string,
+	Record<string, (args: string[]) => Promise<void>>
+> = {
 	project: {
 		list: async () => {
 			print(await query("projects.list"));
@@ -189,7 +198,9 @@ const commands: Record<string, Record<string, (args: string[]) => Promise<void>>
 			const [projectId, title, ...rest] = args;
 
 			if (!projectId || !title) {
-				console.error("Usage: kintsugi task create <project-id> <title> [--desc ...] [--branch ...]");
+				console.error(
+					"Usage: kintsugi task create <project-id> <title> [--desc ...] [--branch ...]",
+				);
 				process.exit(1);
 			}
 
@@ -209,7 +220,9 @@ const commands: Record<string, Record<string, (args: string[]) => Promise<void>>
 			const [id, ...rest] = args;
 
 			if (!id) {
-				console.error("Usage: kintsugi task update <task-id> [--brainstorm ...] [--architecture ...] [--review ...]");
+				console.error(
+					"Usage: kintsugi task update <task-id> [--brainstorm ...] [--architecture ...] [--review ...]",
+				);
 				process.exit(1);
 			}
 
@@ -218,7 +231,8 @@ const commands: Record<string, Record<string, (args: string[]) => Promise<void>>
 			const input: Record<string, unknown> = { id };
 
 			if (flags.brainstorm !== undefined) input.brainstorm = flags.brainstorm;
-			if (flags.architecture !== undefined) input.architecture = flags.architecture;
+			if (flags.architecture !== undefined)
+				input.architecture = flags.architecture;
 			if (flags.review !== undefined) input.review = flags.review;
 
 			print(await mutate("tasks.update", input));
@@ -274,7 +288,9 @@ const commands: Record<string, Record<string, (args: string[]) => Promise<void>>
 			const [taskId, name, ...rest] = args;
 
 			if (!taskId || !name) {
-				console.error("Usage: kintsugi subtask create <task-id> <name> [--category code|test|docs|fix|refactor]");
+				console.error(
+					"Usage: kintsugi subtask create <task-id> <name> [--category code|test|docs|fix|refactor]",
+				);
 				process.exit(1);
 			}
 
@@ -293,7 +309,9 @@ const commands: Record<string, Record<string, (args: string[]) => Promise<void>>
 			const [taskId, ...rest] = args;
 
 			if (!taskId) {
-				console.error("Usage: kintsugi subtask create-batch <task-id> --subtasks '<json array>'");
+				console.error(
+					"Usage: kintsugi subtask create-batch <task-id> --subtasks '<json array>'",
+				);
 				process.exit(1);
 			}
 
@@ -313,7 +331,9 @@ const commands: Record<string, Record<string, (args: string[]) => Promise<void>>
 			const [id, ...rest] = args;
 
 			if (!id) {
-				console.error("Usage: kintsugi subtask update <id> [--status ...] [--category ...] [--notes ...] [--name ...]");
+				console.error(
+					"Usage: kintsugi subtask update <id> [--status ...] [--category ...] [--notes ...] [--name ...]",
+				);
 				process.exit(1);
 			}
 
@@ -324,11 +344,16 @@ const commands: Record<string, Record<string, (args: string[]) => Promise<void>>
 			if (flags.category !== undefined) input.category = flags.category;
 			if (flags.notes !== undefined) input.notes = flags.notes;
 			if (flags.name !== undefined) input.name = flags.name;
-			if (flags["should-commit"] !== undefined) input.shouldCommit = flags["should-commit"] === "true";
+			if (flags["should-commit"] !== undefined)
+				input.shouldCommit = flags["should-commit"] === "true";
 			if (flags.files !== undefined) input.files = JSON.parse(flags.files);
-			if (flags["key-decisions"] !== undefined) input.keyDecisions = JSON.parse(flags["key-decisions"]);
-			if (flags["acceptance-criterias"] !== undefined) input.acceptanceCriterias = JSON.parse(flags["acceptance-criterias"]);
-			if (flags["out-of-scope"] !== undefined) input.outOfScope = JSON.parse(flags["out-of-scope"]);
+			if (flags["key-decisions"] !== undefined)
+				input.keyDecisions = JSON.parse(flags["key-decisions"]);
+			if (flags["acceptance-criterias"] !== undefined)
+				input.acceptanceCriterias = JSON.parse(flags["acceptance-criterias"]);
+			if (flags["out-of-scope"] !== undefined)
+				input.outOfScope = JSON.parse(flags["out-of-scope"]);
+			if (flags.steps !== undefined) input.steps = JSON.parse(flags.steps);
 
 			print(await mutate("subtasks.update", input));
 		},
@@ -361,7 +386,9 @@ const commands: Record<string, Record<string, (args: string[]) => Promise<void>>
 			const [service, ...rest] = args;
 
 			if (!service) {
-				console.error("Usage: kintsugi ai sessions <claude|opencode> --project-id <uuid>");
+				console.error(
+					"Usage: kintsugi ai sessions <claude|opencode> --project-id <uuid>",
+				);
 				process.exit(1);
 			}
 
@@ -385,7 +412,9 @@ const commands: Record<string, Record<string, (args: string[]) => Promise<void>>
 			const [service, sessionId] = args;
 
 			if (!service || !sessionId) {
-				console.error("Usage: kintsugi ai session-get <claude|opencode> <session-id>");
+				console.error(
+					"Usage: kintsugi ai session-get <claude|opencode> <session-id>",
+				);
 				process.exit(1);
 			}
 
@@ -396,7 +425,9 @@ const commands: Record<string, Record<string, (args: string[]) => Promise<void>>
 			const [service, sessionId, ...rest] = args;
 
 			if (!service || !sessionId) {
-				console.error("Usage: kintsugi ai messages <claude|opencode> <session-id>");
+				console.error(
+					"Usage: kintsugi ai messages <claude|opencode> <session-id>",
+				);
 				process.exit(1);
 			}
 
@@ -415,7 +446,9 @@ const commands: Record<string, Record<string, (args: string[]) => Promise<void>>
 			const [service, sessionId, ...contentParts] = args;
 
 			if (!service || !sessionId || contentParts.length === 0) {
-				console.error("Usage: kintsugi ai send <claude|opencode> <session-id> <message>");
+				console.error(
+					"Usage: kintsugi ai send <claude|opencode> <session-id> <message>",
+				);
 				process.exit(1);
 			}
 
@@ -434,7 +467,9 @@ const commands: Record<string, Record<string, (args: string[]) => Promise<void>>
 			const [service, sessionId] = args;
 
 			if (!service || !sessionId) {
-				console.error("Usage: kintsugi ai pause <claude|opencode> <session-id>");
+				console.error(
+					"Usage: kintsugi ai pause <claude|opencode> <session-id>",
+				);
 				process.exit(1);
 			}
 
@@ -445,7 +480,9 @@ const commands: Record<string, Record<string, (args: string[]) => Promise<void>>
 			const [service, sessionId] = args;
 
 			if (!service || !sessionId) {
-				console.error("Usage: kintsugi ai resume <claude|opencode> <session-id>");
+				console.error(
+					"Usage: kintsugi ai resume <claude|opencode> <session-id>",
+				);
 				process.exit(1);
 			}
 
@@ -488,6 +525,7 @@ function showHelp() {
   --category          Subtask category (code|test|docs|fix|refactor)
   --status            Subtask status (waiting|in_progress|completed)
   --notes             Subtask notes
+  --steps             Subtask steps (JSON array)
   --project-id        AI session project scope
 
 \x1b[1mEnv:\x1b[0m

@@ -13,6 +13,7 @@ type SubtaskUpdateData = Partial<{
 	name: string;
 	acceptance_criterias: string | null;
 	out_of_scope: string | null;
+	steps: string | null;
 	category: SubtaskCategory | null;
 	status: SubtaskStatus;
 	should_commit: number;
@@ -50,6 +51,7 @@ export function createSubtasksRepository(db: Kysely<Database>) {
 					"should_commit",
 					"key_decisions",
 					"files",
+					"steps",
 					"notes",
 					sql<number>`ROW_NUMBER() OVER (ORDER BY rowid)`.as("index"),
 				])

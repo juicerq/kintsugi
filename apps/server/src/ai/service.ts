@@ -7,15 +7,10 @@ import type {
 	PermissionMode,
 } from "../ai/types";
 import { db } from "../db";
+import { createAiSessionsRepository } from "../db/repositories/ai-sessions";
 import { AiCore } from "./core";
 
-const DEFAULT_ALLOWED_TOOLS = [
-	"Bash",
-	"Read",
-	"Glob",
-	"Grep",
-	"LS",
-];
+const DEFAULT_ALLOWED_TOOLS = ["Bash", "Read", "Glob", "Grep", "LS"];
 
 const aiCore = new AiCore(servicesMap, {
 	claude: {
@@ -114,6 +109,12 @@ type SendMessageParams = {
 	metadata?: Record<string, string>;
 };
 
+type ListByScopeParams = {
+	service: AiServiceName;
+	scope: AiSessionScope & { projectId: string; label: string };
+	limit?: number;
+};
+
 export namespace AiService {
 	export function createSession(params: CreateSessionParams) {
 		const modelId = resolveModelId(params.modelKey, params.service);
@@ -195,6 +196,19 @@ export namespace AiService {
 			role: "user",
 			content: params.content,
 			metadata: params.metadata,
+		});
+	}
+
+	const sessionsRepo = createAiSessionsRepository(db);
+
+	export async function listByScope(params: ListByScopeParams) {
+		return sessionsRepo.listWithMessageStats({
+			service: params.service,
+			scope: {
+				scope_project_id: params.scope.projectId,
+				scope_label: params.scope.label,
+			},
+			limit: params.limit,
 		});
 	}
 }

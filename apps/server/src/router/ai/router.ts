@@ -65,6 +65,11 @@ const schemas = {
 		content: z.string().min(1),
 		metadata: metadataSchema,
 	}),
+	listByScope: z.object({
+		service: serviceSchema,
+		scope: scopeSchema.required({ label: true }),
+		limit: z.number().int().positive().optional(),
+	}),
 } as const;
 
 const sessionsRouter = router({
@@ -122,6 +127,14 @@ const sessionsRouter = router({
 		AiService.stopSession({
 			service: input.service,
 			sessionId: input.sessionId,
+		}),
+	),
+
+	listByScope: publicProcedure.input(schemas.listByScope).query(({ input }) =>
+		AiService.listByScope({
+			service: input.service,
+			scope: input.scope,
+			limit: input.limit,
 		}),
 	),
 });

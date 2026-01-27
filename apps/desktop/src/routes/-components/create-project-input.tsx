@@ -48,7 +48,7 @@ export function CreateProjectInput() {
 	return (
 		<div ref={containerRef} className="mb-8" onBlur={handleBlur}>
 			<Input
-				placeholder="Nome do projeto..."
+				placeholder="Project name..."
 				value={name}
 				onChange={(e) => setName(e.target.value)}
 				onFocus={() => setExpanded(true)}
@@ -68,7 +68,7 @@ export function CreateProjectInput() {
 							value={path}
 							onChange={(e) => setPath(e.target.value)}
 							onKeyDown={handleKeyDown}
-							placeholder="Caminho do projeto..."
+							placeholder="Project path..."
 							className="flex-1"
 						/>
 						<Button

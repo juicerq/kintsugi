@@ -43,30 +43,123 @@ function buildBrainstormPrompt(task: Task, project: Project): string {
 }
 
 function buildArchitecturePrompt(task: Task, project: Project): string {
-	const lines = [
-		`Estou começando a arquitetura para a task "${task.title}".`,
-		"",
-		`Projeto: ${project.name} (${project.path})`,
-		`Task ID: ${task.id}`,
+	const sections = [
+		`# Architecture
+
+You are creating a concrete implementation plan for a development task.`,
+
+		`## Context
+
+- **Project:** ${project.name} (${project.path})
+- **Task ID:** ${task.id}
+- **Title:** ${task.title}${task.description ? `\n- **Description:** ${task.description}` : ""}`,
+
+		task.brainstorm
+			? `## Brainstorm Result
+
+${task.brainstorm}`
+			: null,
+
+		`## Your Mission
+
+### Phase 1: Research
+Explore the codebase deeply BEFORE proposing anything. Read relevant files. Understand existing patterns, types, conventions, and architecture. You need a solid mental model of the current state before designing changes.
+
+Use \`kintsugi task get ${task.id}\` to see all task details.
+
+### Phase 2: Propose
+Present the architecture covering:
+
+1. **Implementation Plan** — What changes, in what order, why. Reference real files, real types, real patterns from the codebase.
+2. **Key Decisions** — Schema changes, API contracts, new patterns, architectural trade-offs.
+3. **Deep Modules** — Look for opportunities to extract modules that encapsulate significant functionality behind simple, testable interfaces that rarely change.
+4. **Files** — New files to create (with purpose) and existing files to modify (with what changes).
+5. **Out of Scope** — What explicitly will NOT be done as part of this task. Be clear about boundaries.
+6. **Testing Plan** — Which parts need tests, what kind, and existing test patterns to follow.
+7. **Subtasks** — Ordered, independently executable steps. Each subtask must be small enough for a single focused session.
+
+### Phase 3: Confirm and Save
+After presenting the architecture, ask: "Devo salvar esta arquitetura e criar as subtasks?"
+
+Only after the user confirms:
+1. Save the architecture: \`kintsugi task update ${task.id} --architecture "..."\`
+2. Create all subtasks: \`kintsugi subtask create-batch ${task.id} --subtasks '[...]'\``,
+
+		`## Subtask Schema
+
+Each subtask in the batch accepts:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| name | string | yes | Clear, actionable name |
+| category | "code" · "test" · "docs" · "fix" · "refactor" | no | Type of work |
+| acceptanceCriterias | string[] | no | Concrete, verifiable criteria |
+| outOfScope | string[] | no | What this subtask must NOT touch |
+| steps | string[] | no | Ordered implementation steps — concrete commands, file operations, and checks the execution agent should follow |
+
+### Example
+
+\`\`\`json
+[
+  {
+    "name": "Create WebSocket event bus",
+    "category": "code",
+    "acceptanceCriterias": [
+      "EventBus class connects to WebSocket server",
+      "Supports subscribe/unsubscribe by event type",
+      "Auto-reconnects on disconnect"
+    ],
+    "outOfScope": [
+      "Authentication",
+      "Message persistence"
+    ],
+    "steps": [
+      "Create src/lib/events/event-bus.ts",
+      "Implement EventBus class with connect(), subscribe(), unsubscribe()",
+      "Add auto-reconnect logic with exponential backoff",
+      "Export from src/lib/events/index.ts",
+      "Run bun tsc --noEmit"
+    ]
+  },
+  {
+    "name": "Add EventBus tests",
+    "category": "test",
+    "acceptanceCriterias": [
+      "Tests connection lifecycle",
+      "Tests subscribe/unsubscribe",
+      "Tests auto-reconnect behavior"
+    ],
+    "outOfScope": [],
+    "steps": [
+      "Create src/lib/events/__tests__/event-bus.test.ts",
+      "Test successful connection",
+      "Test subscribe receives messages",
+      "Test unsubscribe stops messages",
+      "Test reconnect after disconnect",
+      "Run bun test src/lib/events"
+    ]
+  }
+]
+\`\`\``,
+
+		`## CLI Reference
+
+- \`kintsugi task get ${task.id}\` — Task details (includes brainstorm)
+- \`kintsugi subtask list ${task.id}\` — Existing subtasks
+- \`kintsugi task update ${task.id} --architecture "result"\` — Save architecture
+- \`kintsugi subtask create-batch ${task.id} --subtasks '[...]'\` — Create subtasks
+- \`kintsugi project list\` — List projects`,
+
+		`## Rules
+
+- Research BEFORE proposing. Read files. Understand patterns.
+- Be specific. Reference real files, real types, real patterns.
+- Keep subtasks small — completable in a single focused session.
+- Every subtask must have clear acceptance criteria and steps.
+- Do NOT save or create anything until the user confirms.`,
 	];
 
-	if (task.description) {
-		lines.push(`Descrição: ${task.description}`);
-	}
-
-	lines.push(
-		"",
-		"O brainstorm já foi feito. Crie um plano de implementação detalhado com arquivos a criar/modificar e quebre o trabalho em subtasks executáveis.",
-		"",
-		"Você tem acesso à CLI `kintsugi`:",
-		`- \`kintsugi task get ${task.id}\` — ver task (inclui brainstorm)`,
-		`- \`kintsugi subtask create-batch ${task.id} --subtasks '[{"name":"...","category":"code"}]'\` — criar subtasks`,
-		`- \`kintsugi task update ${task.id} --architecture "resultado"\` — salvar a arquitetura`,
-		"",
-		"Ao finalizar, salve a arquitetura e crie as subtasks.",
-	);
-
-	return lines.join("\n");
+	return sections.filter(Boolean).join("\n\n");
 }
 
 function buildReviewPrompt(task: Task, project: Project): string {

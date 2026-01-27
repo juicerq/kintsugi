@@ -37,6 +37,7 @@ export interface SubtaskTable {
 	should_commit: Generated<number>; // 0 or 1, treated as boolean
 	key_decisions: string | null; // JSON array
 	files: string | null; // JSON array
+	steps: string | null; // JSON array
 	notes: string | null;
 }
 

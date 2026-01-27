@@ -129,5 +129,80 @@ export function createAiSessionsRepository(db: Kysely<Database>) {
 				.returningAll()
 				.executeTakeFirst();
 		},
+
+		async listWithMessageStats(input?: {
+			service?: string;
+			scope?: AiSessionScopeColumns;
+			limit?: number;
+		}) {
+			let query = db
+				.selectFrom("ai_sessions")
+				.leftJoin("ai_messages", "ai_messages.session_id", "ai_sessions.id")
+				.select([
+					"ai_sessions.id",
+					"ai_sessions.service",
+					"ai_sessions.title",
+					"ai_sessions.model",
+					"ai_sessions.created_at",
+					"ai_sessions.status",
+					"ai_sessions.stop_requested",
+					"ai_sessions.last_heartbeat_at",
+					"ai_sessions.scope_label",
+				])
+				.select(db.fn.count("ai_messages.id").as("message_count"))
+				.groupBy("ai_sessions.id");
+
+			if (input?.service) {
+				query = query.where("ai_sessions.service", "=", input.service);
+			}
+
+			if (input?.scope) {
+				if (input.scope.scope_project_id !== undefined) {
+					query = query.where(
+						"ai_sessions.scope_project_id",
+						"=",
+						input.scope.scope_project_id,
+					);
+				}
+
+				if (input.scope.scope_label !== undefined) {
+					query = query.where(
+						"ai_sessions.scope_label",
+						"=",
+						input.scope.scope_label,
+					);
+				}
+			}
+
+			query = query.orderBy("ai_sessions.created_at", "desc");
+
+			if (input?.limit) {
+				query = query.limit(input.limit);
+			}
+
+			const sessions = await query.execute();
+
+			// Get last message for each session
+			const sessionsWithPreview = await Promise.all(
+				sessions.map(async (session) => {
+					const lastMessage = await db
+						.selectFrom("ai_messages")
+						.where("session_id", "=", session.id)
+						.orderBy("created_at", "desc")
+						.select(["content", "role"])
+						.limit(1)
+						.executeTakeFirst();
+
+					return {
+						...session,
+						message_count: Number(session.message_count),
+						last_message_preview: lastMessage?.content ?? null,
+						last_message_role: lastMessage?.role ?? null,
+					};
+				}),
+			);
+
+			return sessionsWithPreview;
+		},
 	};
 }
