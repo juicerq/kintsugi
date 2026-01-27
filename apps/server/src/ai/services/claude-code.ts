@@ -99,10 +99,11 @@ export class ClaudeCodeClient extends BaseAiClient {
 
 		let sessionId: string | null = null;
 
+		// Consume the entire stream to drain the "." bootstrap response.
+		// Breaking early leaves leftover messages that pollute the next stream() call.
 		for await (const message of session.stream()) {
 			if (message.session_id) {
 				sessionId = message.session_id;
-				break;
 			}
 		}
 
