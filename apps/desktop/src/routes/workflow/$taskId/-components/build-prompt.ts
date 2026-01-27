@@ -1,20 +1,9 @@
-type WorkflowStep = "brainstorm" | "architecture" | "review";
-
-type TaskData = {
-	id: string;
-	title: string;
-	description: string | null;
-};
-
-type ProjectData = {
-	name: string;
-	path: string;
-};
+import type { Project, Task, WorkflowStep } from "@/lib/types";
 
 export function buildInitialPrompt(
 	step: WorkflowStep,
-	task: TaskData,
-	project: ProjectData,
+	task: Task,
+	project: Project,
 ): string {
 	const builders: Record<WorkflowStep, () => string> = {
 		brainstorm: () => buildBrainstormPrompt(task, project),
@@ -25,7 +14,7 @@ export function buildInitialPrompt(
 	return builders[step]();
 }
 
-function buildBrainstormPrompt(task: TaskData, project: ProjectData): string {
+function buildBrainstormPrompt(task: Task, project: Project): string {
 	const lines = [
 		`Estou começando o brainstorm para a task "${task.title}".`,
 		"",
@@ -39,7 +28,7 @@ function buildBrainstormPrompt(task: TaskData, project: ProjectData): string {
 
 	lines.push(
 		"",
-		"Preciso que você explore diferentes abordagens para resolver essa task. Para cada abordagem, analise prós, contras e riscos. Ao final, recomende a melhor opção.",
+		"Vamos fazer um brainstorm juntos. Comece entendendo a task, proponha uma abordagem inicial curta e espere meu input. Quero iterar ideias — não despeje tudo de uma vez.",
 		"",
 		"Você tem acesso à CLI `kintsugi` para consultar e atualizar dados do projeto:",
 		`- \`kintsugi task get ${task.id}\` — detalhes desta task`,
@@ -53,10 +42,7 @@ function buildBrainstormPrompt(task: TaskData, project: ProjectData): string {
 	return lines.join("\n");
 }
 
-function buildArchitecturePrompt(
-	task: TaskData,
-	project: ProjectData,
-): string {
+function buildArchitecturePrompt(task: Task, project: Project): string {
 	const lines = [
 		`Estou começando a arquitetura para a task "${task.title}".`,
 		"",
@@ -83,7 +69,7 @@ function buildArchitecturePrompt(
 	return lines.join("\n");
 }
 
-function buildReviewPrompt(task: TaskData, project: ProjectData): string {
+function buildReviewPrompt(task: Task, project: Project): string {
 	const lines = [
 		`Estou começando a review para a task "${task.title}".`,
 		"",

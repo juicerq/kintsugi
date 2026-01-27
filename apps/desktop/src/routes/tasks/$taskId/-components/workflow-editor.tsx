@@ -1,16 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
+import type { Task, WorkflowStep } from "@/lib/types";
 import { trpc } from "../../../../trpc";
 
-type WorkflowTab = "brainstorm" | "architecture" | "review";
-
 interface WorkflowEditorProps {
-	task: {
-		id: string;
-		brainstorm: string | null;
-		architecture: string | null;
-		review: string | null;
-	};
-	activeTab: WorkflowTab;
+	task: Task;
+	activeTab: WorkflowStep;
 }
 
 export function WorkflowEditor({ task, activeTab }: WorkflowEditorProps) {

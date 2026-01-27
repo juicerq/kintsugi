@@ -1,12 +1,28 @@
 import { TRPCError } from "@trpc/server";
 import { type ModelKey, modelsMap } from "../ai/models";
 import { servicesMap } from "../ai/services";
-import type { AiServiceName, AiSessionScope } from "../ai/types";
+import type {
+	AiServiceName,
+	AiSessionScope,
+	PermissionMode,
+} from "../ai/types";
 import { db } from "../db";
 import { AiCore } from "./core";
 
+const DEFAULT_ALLOWED_TOOLS = [
+	"Bash",
+	"Read",
+	"Glob",
+	"Grep",
+	"LS",
+];
+
 const aiCore = new AiCore(servicesMap, {
-	claude: { db },
+	claude: {
+		db,
+		allowedTools: DEFAULT_ALLOWED_TOOLS,
+		permissionMode: "dontAsk",
+	},
 	opencode: {
 		sdk: {
 			session: {
@@ -50,6 +66,8 @@ type CreateSessionParams = {
 	title?: string;
 	scope: AiSessionScope & { projectId: string };
 	metadata?: Record<string, string>;
+	allowedTools?: string[];
+	permissionMode?: PermissionMode;
 };
 
 type ListSessionsParams = {
@@ -107,6 +125,8 @@ export namespace AiService {
 			model: modelId,
 			scope: params.scope,
 			metadata: params.metadata,
+			allowedTools: params.allowedTools,
+			permissionMode: params.permissionMode,
 		});
 	}
 

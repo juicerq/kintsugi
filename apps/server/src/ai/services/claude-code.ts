@@ -17,6 +17,7 @@ import type {
 	CreateSessionInput,
 	GetMessagesInput,
 	ListSessionsInput,
+	PermissionMode,
 	SendMessageInput,
 } from "../types";
 
@@ -46,10 +47,20 @@ type ClaudeCodeSessionHandle = {
 export type ClaudeCodeClientConfig = {
 	model?: string;
 	db?: Kysely<Database>;
-	createSession?: (input: { model: string }) => ClaudeCodeSessionHandle;
+	allowedTools?: string[];
+	permissionMode?: PermissionMode;
+	createSession?: (input: {
+		model: string;
+		allowedTools?: string[];
+		permissionMode?: string;
+	}) => ClaudeCodeSessionHandle;
 	resumeSession?: (
 		sessionId: string,
-		input: { model: string },
+		input: {
+			model: string;
+			allowedTools?: string[];
+			permissionMode?: string;
+		},
 	) => ClaudeCodeSessionHandle;
 };
 
@@ -93,7 +104,14 @@ export class ClaudeCodeClient extends BaseAiClient {
 			throw new Error("Claude Code model not configured");
 		}
 
-		const session = this.createSessionHandler({ model });
+		const allowedTools = input.allowedTools ?? this.config.allowedTools;
+		const permissionMode = input.permissionMode ?? this.config.permissionMode;
+
+		const session = this.createSessionHandler({
+			model,
+			...(allowedTools && { allowedTools }),
+			...(permissionMode && { permissionMode }),
+		});
 
 		await session.send(".");
 
@@ -327,7 +345,14 @@ export class ClaudeCodeClient extends BaseAiClient {
 			throw new Error("Claude Code model not configured");
 		}
 
-		const resumed = this.resumeSessionHandler(sessionId, { model });
+		const allowedTools = this.config.allowedTools;
+		const permissionMode = this.config.permissionMode;
+
+		const resumed = this.resumeSessionHandler(sessionId, {
+			model,
+			...(allowedTools && { allowedTools }),
+			...(permissionMode && { permissionMode }),
+		});
 
 		this.sessionCache.set(sessionId, resumed);
 

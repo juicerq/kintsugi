@@ -15,6 +15,10 @@ const scopeSchema = z.object({
 
 const metadataSchema = z.record(z.string()).optional();
 
+const permissionModeSchema = z
+	.enum(["default", "acceptEdits", "dontAsk", "plan"])
+	.optional();
+
 const schemas = {
 	createSession: z.object({
 		service: serviceSchema,
@@ -22,6 +26,8 @@ const schemas = {
 		title: z.string().optional(),
 		scope: scopeSchema,
 		metadata: metadataSchema,
+		allowedTools: z.array(z.string()).optional(),
+		permissionMode: permissionModeSchema,
 	}),
 	listSessions: z.object({
 		service: serviceSchema,
@@ -71,6 +77,8 @@ const sessionsRouter = router({
 			title: input.title,
 			scope: input.scope,
 			metadata: input.metadata,
+			allowedTools: input.allowedTools,
+			permissionMode: input.permissionMode,
 		}),
 	),
 

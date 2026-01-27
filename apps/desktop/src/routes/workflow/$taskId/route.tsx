@@ -1,25 +1,18 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { ArrowLeft, Lightbulb, BookOpen, Search, Send, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { workflowSteps } from "@/lib/consts";
+import type { ModelKey, WorkflowStep } from "@/lib/types";
 import { Text } from "@/components/ui/text";
 import { Title } from "@/components/ui/title";
 import { cn } from "@/lib/utils";
 import { trpc } from "../../../trpc";
 import { buildInitialPrompt } from "./-components/build-prompt";
 
-type WorkflowStep = "brainstorm" | "architecture" | "review";
-
-const stepMeta: Record<
-	WorkflowStep,
-	{ label: string; icon: typeof Lightbulb; variant: "violet" | "amber" | "emerald" }
-> = {
-	brainstorm: { label: "Brainstorm", icon: Lightbulb, variant: "violet" },
-	architecture: { label: "Architecture", icon: BookOpen, variant: "amber" },
-	review: { label: "Review", icon: Search, variant: "emerald" },
-};
-
-type ModelKey = "opus-4.5" | "sonnet-4.5" | "haiku-4.5";
+const stepMeta = Object.fromEntries(
+	workflowSteps.map((s) => [s.key, { label: s.label, icon: s.icon, variant: s.variant }]),
+) as Record<WorkflowStep, { label: string; icon: (typeof workflowSteps)[number]["icon"]; variant: "violet" | "amber" | "emerald" }>;
 
 export const Route = createFileRoute("/workflow/$taskId")({
 	validateSearch: (search: Record<string, unknown>) => ({

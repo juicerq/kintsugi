@@ -1,53 +1,18 @@
 import { useNavigate } from "@tanstack/react-router";
-import {
-	BookOpen,
-	Check,
-	ChevronDown,
-	GitBranch,
-	Lightbulb,
-	Search,
-} from "lucide-react";
+import { Check, ChevronDown, Eye, GitBranch } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { modelOptions, workflowSteps } from "@/lib/consts";
+import type { ModelKey, Task, WorkflowStep } from "@/lib/types";
 import { Text } from "@/components/ui/text";
 import { Title } from "@/components/ui/title";
 import { cn } from "@/lib/utils";
 import { trpc } from "../../../../trpc";
-
-type WorkflowStep = "brainstorm" | "architecture" | "review";
-type ModelKey = "opus-4.5" | "sonnet-4.5" | "haiku-4.5";
-
-const modelOptions: { key: ModelKey; label: string }[] = [
-	{ key: "opus-4.5", label: "Opus 4.5" },
-	{ key: "sonnet-4.5", label: "Sonnet 4.5" },
-	{ key: "haiku-4.5", label: "Haiku 4.5" },
-];
-
-const workflowSteps: {
-	key: WorkflowStep;
-	label: string;
-	icon: typeof Lightbulb;
-	variant: "violet" | "amber" | "emerald";
-}[] = [
-	{ key: "brainstorm", label: "Brainstorm", icon: Lightbulb, variant: "violet" },
-	{ key: "architecture", label: "Architecture", icon: BookOpen, variant: "amber" },
-	{ key: "review", label: "Review", icon: Search, variant: "emerald" },
-];
+import { WorkflowDialog } from "./workflow-dialog";
 
 interface TaskHeaderProps {
-	task: {
-		id: string;
-		project_id: string;
-		title: string;
-		description: string | null;
-		branch_name: string | null;
-		brainstorm: string | null;
-		architecture: string | null;
-		review: string | null;
-		created_at: string;
-		completed_at: string | null;
-	};
+	task: Task;
 	completedSubtasks?: number;
 	totalSubtasks?: number;
 }
@@ -58,6 +23,8 @@ export function TaskHeader({
 	totalSubtasks = 0,
 }: TaskHeaderProps) {
 	const navigate = useNavigate();
+	const [dialogOpen, setDialogOpen] = useState(false);
+	const [dialogTab, setDialogTab] = useState<WorkflowStep>("brainstorm");
 
 	const utils = trpc.useUtils();
 	const toggleComplete = trpc.tasks.toggleComplete.useMutation({
@@ -80,6 +47,11 @@ export function TaskHeader({
 			params: { taskId: task.id },
 			search: { step, model },
 		});
+	}
+
+	function handleViewEdit(step: WorkflowStep) {
+		setDialogTab(step);
+		setDialogOpen(true);
 	}
 
 	return (
@@ -137,10 +109,18 @@ export function TaskHeader({
 							step={step}
 							hasContent={task[step.key] !== null}
 							onSelect={(model) => handleWorkflowStep(step.key, model)}
+							onViewEdit={() => handleViewEdit(step.key)}
 						/>
 					))}
 				</div>
 			</div>
+
+			<WorkflowDialog
+				open={dialogOpen}
+				onOpenChange={setDialogOpen}
+				initialTab={dialogTab}
+				task={task}
+			/>
 		</div>
 	);
 }
@@ -149,12 +129,14 @@ interface WorkflowStepButtonProps {
 	step: (typeof workflowSteps)[number];
 	hasContent: boolean;
 	onSelect: (model: ModelKey) => void;
+	onViewEdit: () => void;
 }
 
 function WorkflowStepButton({
 	step,
 	hasContent,
 	onSelect,
+	onViewEdit,
 }: WorkflowStepButtonProps) {
 	const [open, setOpen] = useState(false);
 	const ref = useRef<HTMLDivElement>(null);
@@ -193,6 +175,18 @@ function WorkflowStepButton({
 
 			{open && (
 				<div className="absolute right-0 top-full mt-1 z-50 min-w-[140px] rounded-md border border-white/10 bg-[#1a1a1a] py-1 shadow-xl">
+					<button
+						type="button"
+						onClick={() => {
+							setOpen(false);
+							onViewEdit();
+						}}
+						className="flex w-full items-center gap-2 px-3 py-1.5 text-[11px] text-white/70 hover:bg-white/10 hover:text-white/90 transition-colors"
+					>
+						<Eye className="h-3 w-3" />
+						View / Edit
+					</button>
+					<div className="my-1 h-px bg-white/10" />
 					{modelOptions.map((model) => (
 						<button
 							key={model.key}
@@ -201,8 +195,9 @@ function WorkflowStepButton({
 								setOpen(false);
 								onSelect(model.key);
 							}}
-							className="flex w-full items-center px-3 py-1.5 text-[11px] text-white/70 hover:bg-white/10 hover:text-white/90 transition-colors"
+							className="flex w-full items-center gap-2 px-3 py-1.5 text-[11px] text-white/70 hover:bg-white/10 hover:text-white/90 transition-colors"
 						>
+							<span className={cn("w-1.5 h-1.5 rounded-full", model.dotColor)} />
 							{model.label}
 						</button>
 					))}

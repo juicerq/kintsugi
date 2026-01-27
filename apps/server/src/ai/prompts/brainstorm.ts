@@ -33,40 +33,16 @@ ${projectDocs}`
 
 		`## Instructions
 
-1. **Understand** the task fully. Restate it in your own words to confirm understanding.
-2. **Explore 2-3 approaches.** For each:
-   - Describe the approach clearly
-   - List pros and cons
-   - Identify risks or unknowns
-3. **Recommend one approach** with clear reasoning for why it's the best fit.
-4. **List considerations** — edge cases, things to watch out for, questions that need answering.
+Start by understanding the task. Restate it briefly to confirm you got it right, then propose ONE initial approach — keep it concise (a few paragraphs max).
 
-## Output Format
+Then **stop and wait for my input.** This is a conversation, not a monologue. I want to iterate on ideas together — challenge your approach, suggest alternatives, ask questions. You do the same with mine.
 
-### Understanding
-(Your interpretation of what this task requires)
-
-### Approaches
-
-#### Approach 1: (Name)
-(Description)
-- **Pros:** ...
-- **Cons:** ...
-- **Risks:** ...
-
-#### Approach 2: (Name)
-(Description)
-- **Pros:** ...
-- **Cons:** ...
-- **Risks:** ...
-
-(Add more if relevant)
-
-### Recommendation
-(Which approach and why)
-
-### Considerations
-(Edge cases, open questions, things to watch out for)`,
+**Rules:**
+- Keep responses short and focused. No walls of text.
+- Don't dump all approaches at once. We explore one at a time.
+- Push back if you think my idea has issues. Be direct.
+- Ask clarifying questions when something is ambiguous.
+- Only when we both agree on a direction, summarize the final approach.`,
 	];
 
 	return sections.filter(Boolean).join("\n\n");

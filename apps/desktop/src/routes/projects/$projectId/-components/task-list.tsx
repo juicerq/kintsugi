@@ -1,18 +1,10 @@
+import type { TaskListItem } from "@/lib/types";
 import { Title } from "@/components/ui/title";
 import { TaskItem } from "./task-item";
 
-interface Task {
-	id: string;
-	project_id: string;
-	title: string;
-	completed_at: string | null;
-	total_subtasks: number;
-	completed_subtasks: number;
-}
-
 interface TaskListProps {
-	incompleteTasks: Task[];
-	completedTasks: Task[];
+	incompleteTasks: TaskListItem[];
+	completedTasks: TaskListItem[];
 }
 
 export function TaskList({ incompleteTasks, completedTasks }: TaskListProps) {

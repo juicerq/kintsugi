@@ -1,19 +1,9 @@
 import { Text } from "@/components/ui/text";
+import type { Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface TaskResumeProps {
-	task: {
-		id: string;
-		project_id: string;
-		title: string;
-		description: string | null;
-		branch_name: string | null;
-		brainstorm: string | null;
-		architecture: string | null;
-		review: string | null;
-		created_at: string;
-		completed_at: string | null;
-	};
+	task: Task;
 	completedSubtasks?: number;
 	totalSubtasks?: number;
 }

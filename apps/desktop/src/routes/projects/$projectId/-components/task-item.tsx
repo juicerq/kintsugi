@@ -2,19 +2,13 @@ import { Link } from "@tanstack/react-router";
 import { Check, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import type { TaskListItem } from "@/lib/types";
 import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
 import { trpc } from "../../../../trpc";
 
 interface TaskItemProps {
-	task: {
-		id: string;
-		project_id: string;
-		title: string;
-		completed_at: string | null;
-		total_subtasks: number;
-		completed_subtasks: number;
-	};
+	task: TaskListItem;
 }
 
 export function TaskItem({ task }: TaskItemProps) {
