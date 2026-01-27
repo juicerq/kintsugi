@@ -1,8 +1,6 @@
-import type { RouterOutputs } from "@kintsugi/shared";
 import { Link } from "@tanstack/react-router";
+import type { Project } from "@/lib/types";
 import { DragHandle } from "./drag-handle";
-
-type Project = RouterOutputs["projects"]["list"][number];
 
 interface ProjectCardProps {
 	project: Project;

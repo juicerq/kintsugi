@@ -22,7 +22,7 @@ export interface TaskTable {
 }
 
 export type SubtaskCategory = "code" | "test" | "docs" | "fix" | "refactor";
-export type SubtaskStatus = "waiting" | "in_progress" | "completed";
+export type SubtaskStatus = "waiting" | "in_progress" | "completed" | "failed";
 
 export interface SubtaskTable {
 	id: string;
@@ -37,7 +37,9 @@ export interface SubtaskTable {
 	should_commit: Generated<number>; // 0 or 1, treated as boolean
 	key_decisions: string | null; // JSON array
 	files: string | null; // JSON array
+	steps: string | null; // JSON array
 	notes: string | null;
+	error: string | null;
 }
 
 export interface AiSessionTable {

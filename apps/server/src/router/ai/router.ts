@@ -15,6 +15,10 @@ const scopeSchema = z.object({
 
 const metadataSchema = z.record(z.string()).optional();
 
+const permissionModeSchema = z
+	.enum(["default", "acceptEdits", "dontAsk", "plan"])
+	.optional();
+
 const schemas = {
 	createSession: z.object({
 		service: serviceSchema,
@@ -22,6 +26,8 @@ const schemas = {
 		title: z.string().optional(),
 		scope: scopeSchema,
 		metadata: metadataSchema,
+		allowedTools: z.array(z.string()).optional(),
+		permissionMode: permissionModeSchema,
 	}),
 	listSessions: z.object({
 		service: serviceSchema,
@@ -59,6 +65,11 @@ const schemas = {
 		content: z.string().min(1),
 		metadata: metadataSchema,
 	}),
+	listByScope: z.object({
+		service: serviceSchema,
+		scope: scopeSchema.required({ label: true }),
+		limit: z.number().int().positive().optional(),
+	}),
 } as const;
 
 const sessionsRouter = router({
@@ -71,6 +82,8 @@ const sessionsRouter = router({
 			title: input.title,
 			scope: input.scope,
 			metadata: input.metadata,
+			allowedTools: input.allowedTools,
+			permissionMode: input.permissionMode,
 		}),
 	),
 
@@ -114,6 +127,14 @@ const sessionsRouter = router({
 		AiService.stopSession({
 			service: input.service,
 			sessionId: input.sessionId,
+		}),
+	),
+
+	listByScope: publicProcedure.input(schemas.listByScope).query(({ input }) =>
+		AiService.listByScope({
+			service: input.service,
+			scope: input.scope,
+			limit: input.limit,
 		}),
 	),
 });

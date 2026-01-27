@@ -15,6 +15,7 @@ const schemas = {
 		name: z.string().min(1),
 		acceptanceCriterias: z.array(z.string()).optional(),
 		outOfScope: z.array(z.string()).optional(),
+		steps: z.array(z.string()).optional(),
 		category: z.enum(["code", "test", "docs", "fix", "refactor"]).optional(),
 	}),
 	createSubtasksBatch: z.object({
@@ -24,6 +25,7 @@ const schemas = {
 				name: z.string().min(1),
 				acceptanceCriterias: z.array(z.string()).optional(),
 				outOfScope: z.array(z.string()).optional(),
+				steps: z.array(z.string()).optional(),
 				category: z
 					.enum(["code", "test", "docs", "fix", "refactor"])
 					.optional(),
@@ -39,10 +41,14 @@ const schemas = {
 			.enum(["code", "test", "docs", "fix", "refactor"])
 			.nullable()
 			.optional(),
-		status: z.enum(["waiting", "in_progress", "completed"]).optional(),
+		status: z
+			.enum(["waiting", "in_progress", "completed", "failed"])
+			.optional(),
+		error: z.string().nullable().optional(),
 		shouldCommit: z.boolean().optional(),
 		keyDecisions: z.array(z.string()).nullable().optional(),
 		files: z.array(z.string()).nullable().optional(),
+		steps: z.array(z.string()).nullable().optional(),
 		notes: z.string().nullable().optional(),
 		startedAt: z.string().nullable().optional(),
 		finishedAt: z.string().nullable().optional(),
@@ -78,6 +84,7 @@ export function createSubtasksRouter(subtasksRepo: SubtasksRepository) {
 					out_of_scope: input.outOfScope
 						? JSON.stringify(input.outOfScope)
 						: null,
+					steps: input.steps ? JSON.stringify(input.steps) : null,
 					category: input.category ?? null,
 					status: "waiting",
 					should_commit: 0,
@@ -86,6 +93,7 @@ export function createSubtasksRouter(subtasksRepo: SubtasksRepository) {
 					key_decisions: null,
 					files: null,
 					notes: null,
+					error: null,
 				});
 			}),
 
@@ -102,6 +110,7 @@ export function createSubtasksRouter(subtasksRepo: SubtasksRepository) {
 					out_of_scope: subtask.outOfScope
 						? JSON.stringify(subtask.outOfScope)
 						: null,
+					steps: subtask.steps ? JSON.stringify(subtask.steps) : null,
 					category: subtask.category ?? null,
 					status: "waiting" as const,
 					should_commit: 0,
@@ -110,6 +119,7 @@ export function createSubtasksRouter(subtasksRepo: SubtasksRepository) {
 					key_decisions: null,
 					files: null,
 					notes: null,
+					error: null,
 				}));
 				return subtasksRepo.createMany(subtasks);
 			}),
@@ -121,6 +131,7 @@ export function createSubtasksRouter(subtasksRepo: SubtasksRepository) {
 					id,
 					acceptanceCriterias,
 					outOfScope,
+					steps,
 					shouldCommit,
 					keyDecisions,
 					files,
@@ -140,6 +151,12 @@ export function createSubtasksRouter(subtasksRepo: SubtasksRepository) {
 						outOfScope !== undefined
 							? outOfScope
 								? JSON.stringify(outOfScope)
+								: null
+							: undefined,
+					steps:
+						steps !== undefined
+							? steps
+								? JSON.stringify(steps)
 								: null
 							: undefined,
 					should_commit:

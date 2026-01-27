@@ -43,11 +43,15 @@ export type AiMessage = {
 	raw?: unknown;
 };
 
+export type PermissionMode = "default" | "acceptEdits" | "dontAsk" | "plan";
+
 export type CreateSessionInput = {
 	title?: string;
 	model?: string;
 	scope?: AiSessionScope;
 	metadata?: Record<string, string>;
+	allowedTools?: string[];
+	permissionMode?: PermissionMode;
 };
 
 export type ListSessionsInput = {

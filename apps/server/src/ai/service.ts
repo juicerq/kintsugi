@@ -1,12 +1,23 @@
 import { TRPCError } from "@trpc/server";
 import { type ModelKey, modelsMap } from "../ai/models";
 import { servicesMap } from "../ai/services";
-import type { AiServiceName, AiSessionScope } from "../ai/types";
+import type {
+	AiServiceName,
+	AiSessionScope,
+	PermissionMode,
+} from "../ai/types";
 import { db } from "../db";
+import { createAiSessionsRepository } from "../db/repositories/ai-sessions";
 import { AiCore } from "./core";
 
+const DEFAULT_ALLOWED_TOOLS = ["Bash", "Read", "Glob", "Grep", "LS"];
+
 const aiCore = new AiCore(servicesMap, {
-	claude: { db },
+	claude: {
+		db,
+		allowedTools: DEFAULT_ALLOWED_TOOLS,
+		permissionMode: "dontAsk",
+	},
 	opencode: {
 		sdk: {
 			session: {
@@ -50,6 +61,8 @@ type CreateSessionParams = {
 	title?: string;
 	scope: AiSessionScope & { projectId: string };
 	metadata?: Record<string, string>;
+	allowedTools?: string[];
+	permissionMode?: PermissionMode;
 };
 
 type ListSessionsParams = {
@@ -96,6 +109,12 @@ type SendMessageParams = {
 	metadata?: Record<string, string>;
 };
 
+type ListByScopeParams = {
+	service: AiServiceName;
+	scope: AiSessionScope & { projectId: string; label: string };
+	limit?: number;
+};
+
 export namespace AiService {
 	export function createSession(params: CreateSessionParams) {
 		const modelId = resolveModelId(params.modelKey, params.service);
@@ -107,6 +126,8 @@ export namespace AiService {
 			model: modelId,
 			scope: params.scope,
 			metadata: params.metadata,
+			allowedTools: params.allowedTools,
+			permissionMode: params.permissionMode,
 		});
 	}
 
@@ -175,6 +196,19 @@ export namespace AiService {
 			role: "user",
 			content: params.content,
 			metadata: params.metadata,
+		});
+	}
+
+	const sessionsRepo = createAiSessionsRepository(db);
+
+	export async function listByScope(params: ListByScopeParams) {
+		return sessionsRepo.listWithMessageStats({
+			service: params.service,
+			scope: {
+				scope_project_id: params.scope.projectId,
+				scope_label: params.scope.label,
+			},
+			limit: params.limit,
 		});
 	}
 }

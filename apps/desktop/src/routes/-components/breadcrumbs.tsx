@@ -6,11 +6,18 @@ interface BreadcrumbSegment {
 	href?: string;
 }
 
+const stepLabels: Record<string, string> = {
+	brainstorm: "Brainstorm",
+	architecture: "Architecture",
+	review: "Review",
+};
+
 function useBreadcrumbs(pathname: string): BreadcrumbSegment[] {
 	const [projects] = trpc.projects.list.useSuspenseQuery();
 
 	const taskMatch = pathname.match(/^\/tasks\/([^/]+)/);
-	const taskId = taskMatch?.[1] ?? null;
+	const workflowMatch = pathname.match(/^\/workflow\/([^/]+)/);
+	const taskId = taskMatch?.[1] ?? workflowMatch?.[1] ?? null;
 
 	const { data: task } = trpc.tasks.get.useQuery(
 		{ id: taskId! },
@@ -35,7 +42,7 @@ function useBreadcrumbs(pathname: string): BreadcrumbSegment[] {
 		return segments;
 	}
 
-	if (taskMatch && task) {
+	if ((taskMatch || workflowMatch) && task) {
 		const project = projects.find((p) => p.id === task.project_id);
 		const projectName = project?.name ?? "Project";
 
@@ -44,7 +51,16 @@ function useBreadcrumbs(pathname: string): BreadcrumbSegment[] {
 			label: "Tasks",
 			href: `/projects/${task.project_id}`,
 		});
-		segments.push({ label: task.title });
+		segments.push({
+			label: task.title,
+			href: workflowMatch ? `/tasks/${task.id}` : undefined,
+		});
+
+		if (workflowMatch) {
+			const params = new URLSearchParams(window.location.search);
+			const step = params.get("step") ?? "brainstorm";
+			segments.push({ label: stepLabels[step] ?? step });
+		}
 	}
 
 	return segments;

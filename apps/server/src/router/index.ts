@@ -4,12 +4,14 @@ import { createProjectsRepository } from "../db/repositories/projects";
 import { createSubtasksRepository } from "../db/repositories/subtasks";
 import { createTasksRepository } from "../db/repositories/tasks";
 import type { Database } from "../db/types";
+import { createExecutionRouter } from "../features/execution/router";
 import { router } from "../lib/trpc";
 import { aiRouter } from "./ai/router";
 import { eventsRouter } from "./events/router";
 import { greetProcedure } from "./greet/procedure";
 import { createProjectsRouter } from "./projects/router";
 import { createSubtasksRouter } from "./subtasks/router";
+import { createGitRouter } from "./git/router";
 import { createTasksRouter } from "./tasks/router";
 
 export function createAppRouter(database: Kysely<Database>) {
@@ -22,6 +24,12 @@ export function createAppRouter(database: Kysely<Database>) {
 		projects: createProjectsRouter(projectsRepo),
 		tasks: createTasksRouter(tasksRepo),
 		subtasks: createSubtasksRouter(subtasksRepo),
+		execution: createExecutionRouter({
+			subtasksRepo,
+			tasksRepo,
+			projectsRepo,
+		}),
+		git: createGitRouter(projectsRepo),
 		ai: aiRouter,
 		events: eventsRouter,
 	});
