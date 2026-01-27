@@ -105,3 +105,16 @@
 .animate-kintsugi-pulse {
   animation: kintsugi-pulse 1.2s ease-in-out infinite;
 }
+
+@keyframes border-beam {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-border-beam {
+  animation: border-beam 3.5s linear infinite;
+}

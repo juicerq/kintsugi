@@ -11,21 +11,41 @@ type EventHandlerMap = {
 };
 
 function createHandlers(queryClient: QueryClient): EventHandlerMap {
+	function invalidateExecution(taskId: string) {
+		queryClient.invalidateQueries({
+			queryKey: [["execution", "getStatus"], { input: { taskId } }],
+		});
+		queryClient.invalidateQueries({
+			queryKey: [["subtasks", "list"], { input: { taskId } }],
+		});
+	}
+
 	return {
 		"subtask.updated": (event) => {
 			queryClient.invalidateQueries({
-				queryKey: trpc.subtasks.list.getQueryKey({
-					taskId: event.taskId,
-				}),
+				queryKey: [["subtasks", "list"], { input: { taskId: event.taskId } }],
 			});
 			queryClient.invalidateQueries({
-				queryKey: trpc.subtasks.get.getQueryKey({
-					id: event.subtaskId,
-				}),
+				queryKey: [["subtasks", "get"], { input: { id: event.subtaskId } }],
 			});
 			queryClient.invalidateQueries({
-				queryKey: trpc.tasks.get.getQueryKey({ id: event.taskId }),
+				queryKey: [["tasks", "get"], { input: { id: event.taskId } }],
 			});
+		},
+		"execution.started": (event) => {
+			invalidateExecution(event.taskId);
+		},
+		"execution.subtaskStarted": (event) => {
+			invalidateExecution(event.taskId);
+		},
+		"execution.subtaskCompleted": (event) => {
+			invalidateExecution(event.taskId);
+		},
+		"execution.subtaskFailed": (event) => {
+			invalidateExecution(event.taskId);
+		},
+		"execution.stopped": (event) => {
+			invalidateExecution(event.taskId);
 		},
 	};
 }
@@ -35,11 +55,11 @@ export function useServerEvents(queryClient: QueryClient) {
 
 	trpc.events.onInvalidate.useSubscription(undefined, {
 		onData(event) {
-			const handler = handlers[event.type];
-			if (!handler) {
-				return;
-			}
-			handler(event as Extract<UiInvalidateEvent, { type: typeof event.type }>);
+			const handler = handlers[event.type] as
+				| ((event: UiInvalidateEvent) => void)
+				| undefined;
+			if (!handler) return;
+			handler(event);
 		},
 	});
 }

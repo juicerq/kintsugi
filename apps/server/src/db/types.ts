@@ -22,7 +22,7 @@ export interface TaskTable {
 }
 
 export type SubtaskCategory = "code" | "test" | "docs" | "fix" | "refactor";
-export type SubtaskStatus = "waiting" | "in_progress" | "completed";
+export type SubtaskStatus = "waiting" | "in_progress" | "completed" | "failed";
 
 export interface SubtaskTable {
 	id: string;
@@ -39,6 +39,7 @@ export interface SubtaskTable {
 	files: string | null; // JSON array
 	steps: string | null; // JSON array
 	notes: string | null;
+	error: string | null;
 }
 
 export interface AiSessionTable {

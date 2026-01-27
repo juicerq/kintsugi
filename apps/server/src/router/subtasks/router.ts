@@ -41,7 +41,10 @@ const schemas = {
 			.enum(["code", "test", "docs", "fix", "refactor"])
 			.nullable()
 			.optional(),
-		status: z.enum(["waiting", "in_progress", "completed"]).optional(),
+		status: z
+			.enum(["waiting", "in_progress", "completed", "failed"])
+			.optional(),
+		error: z.string().nullable().optional(),
 		shouldCommit: z.boolean().optional(),
 		keyDecisions: z.array(z.string()).nullable().optional(),
 		files: z.array(z.string()).nullable().optional(),
@@ -90,6 +93,7 @@ export function createSubtasksRouter(subtasksRepo: SubtasksRepository) {
 					key_decisions: null,
 					files: null,
 					notes: null,
+					error: null,
 				});
 			}),
 
@@ -115,6 +119,7 @@ export function createSubtasksRouter(subtasksRepo: SubtasksRepository) {
 					key_decisions: null,
 					files: null,
 					notes: null,
+					error: null,
 				}));
 				return subtasksRepo.createMany(subtasks);
 			}),
