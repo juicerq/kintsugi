@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "bun --watch src/index.ts",
-		"build": "bun build ./src/index.ts --compile --outfile ../desktop/src-tauri/binaries/kintsugi-server-x86_64-unknown-linux-gnu",
+		"build": "bun build ./src/index.ts --compile --outfile ../desktop/src-tauri/binaries/kintsugi-server-x86_64-unknown-linux-gnu && cp ../../node_modules/.bun/@anthropic-ai+claude-agent-sdk@0.2.19+27912429049419a2/node_modules/@anthropic-ai/claude-agent-sdk/cli.js ../desktop/src-tauri/binaries/claude-code-cli.js",
 		"test": "bun test",
 		"test:watch": "bun test --watch",
 		"test:coverage": "bun test --coverage"

@@ -1,10 +1,10 @@
 #[cfg(not(debug_assertions))]
-use tauri_plugin_shell::ShellExt;
-#[cfg(not(debug_assertions))]
 use std::net::TcpStream;
 #[cfg(not(debug_assertions))]
 use std::time::{Duration, Instant};
 use tauri::Manager;
+#[cfg(not(debug_assertions))]
+use tauri_plugin_shell::ShellExt;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -22,8 +22,15 @@ pub fn run() {
 
             #[cfg(not(debug_assertions))]
             {
+                let resource_dir = app
+                    .path()
+                    .resource_dir()
+                    .expect("Failed to get resource dir");
                 let sidecar = app.shell().sidecar("kintsugi-server").unwrap();
-                let (mut _rx, mut _child) = sidecar.spawn().expect("Failed to spawn sidecar");
+                let (mut _rx, mut _child) = sidecar
+                    .env("TAURI_RESOURCE_DIR", resource_dir)
+                    .spawn()
+                    .expect("Failed to spawn sidecar");
 
                 let deadline = Instant::now() + Duration::from_secs(10);
                 while Instant::now() < deadline {
