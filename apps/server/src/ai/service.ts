@@ -1,3 +1,4 @@
+import { realpathSync } from "node:fs";
 import { TRPCError } from "@trpc/server";
 import { type ModelKey, modelsMap } from "../ai/models";
 import { servicesMap } from "../ai/services";
@@ -12,11 +13,22 @@ import { AiCore } from "./core";
 
 const DEFAULT_ALLOWED_TOOLS = ["Bash", "Read", "Glob", "Grep", "LS"];
 
+function resolveClaudeCodeExecutable(): string | undefined {
+	const binPath = Bun.which("claude");
+
+	if (!binPath) {
+		return undefined;
+	}
+
+	return realpathSync(binPath);
+}
+
 const aiCore = new AiCore(servicesMap, {
 	claude: {
 		db,
 		allowedTools: DEFAULT_ALLOWED_TOOLS,
 		permissionMode: "dontAsk",
+		pathToClaudeCodeExecutable: resolveClaudeCodeExecutable(),
 	},
 	opencode: {
 		sdk: {

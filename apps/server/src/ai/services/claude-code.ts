@@ -49,10 +49,12 @@ export type ClaudeCodeClientConfig = {
 	db?: Kysely<Database>;
 	allowedTools?: string[];
 	permissionMode?: PermissionMode;
+	pathToClaudeCodeExecutable?: string;
 	createSession?: (input: {
 		model: string;
 		allowedTools?: string[];
 		permissionMode?: string;
+		pathToClaudeCodeExecutable?: string;
 	}) => ClaudeCodeSessionHandle;
 	resumeSession?: (
 		sessionId: string,
@@ -60,6 +62,7 @@ export type ClaudeCodeClientConfig = {
 			model: string;
 			allowedTools?: string[];
 			permissionMode?: string;
+			pathToClaudeCodeExecutable?: string;
 		},
 	) => ClaudeCodeSessionHandle;
 };
@@ -78,10 +81,11 @@ export class ClaudeCodeClient extends BaseAiClient {
 	private sessionCache = new Map<string, ClaudeCodeSessionHandle>();
 	private createSessionHandler: (input: {
 		model: string;
+		pathToClaudeCodeExecutable?: string;
 	}) => ClaudeCodeSessionHandle;
 	private resumeSessionHandler: (
 		sessionId: string,
-		input: { model: string },
+		input: { model: string; pathToClaudeCodeExecutable?: string },
 	) => ClaudeCodeSessionHandle;
 
 	constructor(private config: ClaudeCodeClientConfig) {
@@ -106,11 +110,13 @@ export class ClaudeCodeClient extends BaseAiClient {
 
 		const allowedTools = input.allowedTools ?? this.config.allowedTools;
 		const permissionMode = input.permissionMode ?? this.config.permissionMode;
+		const pathToClaudeCodeExecutable = this.config.pathToClaudeCodeExecutable;
 
 		const session = this.createSessionHandler({
 			model,
 			...(allowedTools && { allowedTools }),
 			...(permissionMode && { permissionMode }),
+			...(pathToClaudeCodeExecutable && { pathToClaudeCodeExecutable }),
 		});
 
 		await session.send(".");
@@ -347,11 +353,13 @@ export class ClaudeCodeClient extends BaseAiClient {
 
 		const allowedTools = this.config.allowedTools;
 		const permissionMode = this.config.permissionMode;
+		const pathToClaudeCodeExecutable = this.config.pathToClaudeCodeExecutable;
 
 		const resumed = this.resumeSessionHandler(sessionId, {
 			model,
 			...(allowedTools && { allowedTools }),
 			...(permissionMode && { permissionMode }),
+			...(pathToClaudeCodeExecutable && { pathToClaudeCodeExecutable }),
 		});
 
 		this.sessionCache.set(sessionId, resumed);
