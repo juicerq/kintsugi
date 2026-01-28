@@ -22,15 +22,8 @@ pub fn run() {
 
             #[cfg(not(debug_assertions))]
             {
-                let resource_dir = app
-                    .path()
-                    .resource_dir()
-                    .expect("Failed to get resource dir");
                 let sidecar = app.shell().sidecar("kintsugi-server").unwrap();
-                let (mut _rx, mut _child) = sidecar
-                    .env("TAURI_RESOURCE_DIR", resource_dir)
-                    .spawn()
-                    .expect("Failed to spawn sidecar");
+                let (mut _rx, mut _child) = sidecar.spawn().expect("Failed to spawn sidecar");
 
                 let deadline = Instant::now() + Duration::from_secs(10);
                 while Instant::now() < deadline {

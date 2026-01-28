@@ -1,5 +1,3 @@
-import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
 import { TRPCError } from "@trpc/server";
 import { type ModelKey, modelsMap } from "../ai/models";
 import { servicesMap } from "../ai/services";
@@ -14,35 +12,9 @@ import { AiCore } from "./core";
 
 const DEFAULT_ALLOWED_TOOLS = ["Bash", "Read", "Glob", "Grep", "LS"];
 
-function resolveClaudeCodeExecutable(): string | undefined {
-	// When running as a compiled binary, look for cli.js in various locations
-	const binaryPath = process.argv[0];
-	const binaryDir = dirname(binaryPath);
-
-	// Check locations in order of preference
-	const possiblePaths = [
-		// Next to the binary (development and some production setups)
-		join(binaryDir, "claude-code-cli.js"),
-		// In Tauri resource directory (passed via env var)
-		...(process.env.TAURI_RESOURCE_DIR
-			? [join(process.env.TAURI_RESOURCE_DIR, "claude-code-cli.js")]
-			: []),
-		// In Tauri resource directory (relative to binary)
-		join(binaryDir, "..", "..", "resources", "claude-code-cli.js"),
-		// Alternative Tauri paths
-		join(binaryDir, "..", "resources", "claude-code-cli.js"),
-		// Flat structure
-		join(dirname(binaryDir), "claude-code-cli.js"),
-	];
-
-	for (const cliJsPath of possiblePaths) {
-		if (existsSync(cliJsPath)) {
-			return cliJsPath;
-		}
-	}
-
-	// Fallback: let the SDK auto-resolve (works in development)
-	return undefined;
+function resolveClaudeCodeExecutable(): string {
+	// Hardcoded path to Claude Code executable
+	return "/home/jui/.bun/bin/claude";
 }
 
 const aiCore = new AiCore(servicesMap, {
