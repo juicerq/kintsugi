@@ -1,5 +1,9 @@
 #[cfg(not(debug_assertions))]
 use tauri_plugin_shell::ShellExt;
+#[cfg(not(debug_assertions))]
+use std::net::TcpStream;
+#[cfg(not(debug_assertions))]
+use std::time::{Duration, Instant};
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -20,6 +24,14 @@ pub fn run() {
             {
                 let sidecar = app.shell().sidecar("kintsugi-server").unwrap();
                 let (mut _rx, mut _child) = sidecar.spawn().expect("Failed to spawn sidecar");
+
+                let deadline = Instant::now() + Duration::from_secs(10);
+                while Instant::now() < deadline {
+                    if TcpStream::connect("127.0.0.1:3001").is_ok() {
+                        break;
+                    }
+                    std::thread::sleep(Duration::from_millis(100));
+                }
             }
 
             Ok(())
