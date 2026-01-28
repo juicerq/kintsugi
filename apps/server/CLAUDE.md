@@ -270,7 +270,8 @@ Arquivos em `src/db/migrations/`. Rodam automaticamente no startup via Kysely Mi
 Para criar nova migration:
 1. Criar arquivo `NNN_descricao.ts` em `src/db/migrations/`
 2. Exportar função `up(db: Kysely<unknown>): Promise<void>`
-3. Atualizar types em `src/db/types.ts` se necessário
+3. Adicionar import estático + entry no `migrations` record em `src/db/migrations/index.ts`
+4. Atualizar types em `src/db/types.ts` se necessário
 
 Exemplo:
 ```typescript
