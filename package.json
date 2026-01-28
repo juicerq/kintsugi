@@ -15,7 +15,8 @@
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"format": "biome format --write .",
-		"release": "bun run scripts/release.ts"
+		"release": "bun run scripts/release.ts",
+		"hotswap": "bun run build && sudo cp apps/desktop/src-tauri/target/release/kintsugi /usr/bin/kintsugi && sudo cp apps/desktop/src-tauri/binaries/kintsugi-server-x86_64-unknown-linux-gnu /usr/bin/kintsugi-server"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.12",

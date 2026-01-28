@@ -113,12 +113,15 @@ export class ClaudeCodeClient extends BaseAiClient {
 		const permissionMode = input.permissionMode ?? this.config.permissionMode;
 		const pathToClaudeCodeExecutable = this.config.pathToClaudeCodeExecutable;
 
-		const session = this.createSessionHandler({
+		const opts = {
 			model,
 			...(allowedTools && { allowedTools }),
 			...(permissionMode && { permissionMode }),
 			...(pathToClaudeCodeExecutable && { pathToClaudeCodeExecutable }),
-		});
+		};
+		console.error("[DEBUG createSession] opts:", JSON.stringify(opts, null, 2));
+
+		const session = this.createSessionHandler(opts);
 
 		await session.send(".");
 
