@@ -37,5 +37,15 @@ export function createAiMessagesRepository(db: Kysely<Database>) {
 
 			return await query.selectAll().execute();
 		},
+
+		async countBySession(sessionId: string) {
+			const result = await db
+				.selectFrom("ai_messages")
+				.where("session_id", "=", sessionId)
+				.select(db.fn.count("id").as("count"))
+				.executeTakeFirst();
+
+			return Number(result?.count ?? 0);
+		},
 	};
 }

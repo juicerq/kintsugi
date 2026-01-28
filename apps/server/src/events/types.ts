@@ -13,4 +13,20 @@ export type UiInvalidateEvent =
 			type: "execution.stopped";
 			taskId: string;
 			reason: "user" | "error" | "completed";
+	  }
+	| {
+			type: "session.statusChanged";
+			sessionId: string;
+			status: string;
+			stopRequested: number;
+	  }
+	| {
+			type: "session.newMessage";
+			sessionId: string;
+			messageCount: number;
+	  }
+	| {
+			type: "session.stopped";
+			sessionId: string;
+			reason: "user" | "error" | "system";
 	  };

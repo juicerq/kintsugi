@@ -7,6 +7,7 @@ import { db as defaultDb } from "../../db";
 import { createAiMessagesRepository } from "../../db/repositories/ai-messages";
 import { createAiSessionsRepository } from "../../db/repositories/ai-sessions";
 import type { Database } from "../../db/types";
+import { uiEventBus } from "../../events/bus";
 import { BaseAiClient } from "../core";
 import type {
 	AiMessage,
@@ -277,6 +278,14 @@ export class ClaudeCodeClient extends BaseAiClient {
 				last_heartbeat_at: this.now(),
 			});
 
+			const messageCount = await this.messagesRepo.countBySession(sessionId);
+
+			uiEventBus.publish({
+				type: "session.newMessage",
+				sessionId,
+				messageCount,
+			});
+
 			return this.convertToLocalMessage(saved);
 		} catch (error) {
 			if (error instanceof SessionControlError) {
@@ -301,6 +310,12 @@ export class ClaudeCodeClient extends BaseAiClient {
 		});
 
 		this.closeCachedSession(sessionId);
+
+		uiEventBus.publish({
+			type: "session.stopped",
+			sessionId,
+			reason: "user",
+		});
 	}
 
 	async pauseSession(sessionId: string): Promise<void> {

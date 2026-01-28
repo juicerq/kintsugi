@@ -1,4 +1,5 @@
-import { realpathSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
+import { join } from "node:path";
 import { TRPCError } from "@trpc/server";
 import { type ModelKey, modelsMap } from "../ai/models";
 import { servicesMap } from "../ai/services";
@@ -14,13 +15,32 @@ import { AiCore } from "./core";
 const DEFAULT_ALLOWED_TOOLS = ["Bash", "Read", "Glob", "Grep", "LS"];
 
 function resolveClaudeCodeExecutable(): string | undefined {
-	const binPath = Bun.which("claude");
+	const fromPath = Bun.which("claude");
 
-	if (!binPath) {
+	if (fromPath) {
+		return realpathSync(fromPath);
+	}
+
+	const home = Bun.env.HOME;
+
+	if (!home) {
 		return undefined;
 	}
 
-	return realpathSync(binPath);
+	const candidates = [
+		join(home, ".bun", "bin", "claude"),
+		join(home, ".local", "bin", "claude"),
+		"/usr/local/bin/claude",
+		"/usr/bin/claude",
+	];
+
+	for (const candidate of candidates) {
+		if (existsSync(candidate)) {
+			return realpathSync(candidate);
+		}
+	}
+
+	return undefined;
 }
 
 const aiCore = new AiCore(servicesMap, {

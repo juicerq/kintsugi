@@ -20,6 +20,7 @@ import { trpc } from "../../../trpc";
 import { buildInitialPrompt } from "./-components/build-prompt";
 import { SessionChoiceModal } from "./-components/session-choice-modal";
 import { SessionHistory } from "./-components/session-history";
+import { useSessionEvents } from "./-hooks/use-session-events";
 
 const stepMeta = Object.fromEntries(
 	workflowSteps.map((s) => [
@@ -78,6 +79,47 @@ function WorkflowPage() {
 	const sendMessage = trpc.ai.messages.send.useMutation();
 	const stopSession = trpc.ai.sessions.stop.useMutation();
 	const resumeSession = trpc.ai.sessions.resume.useMutation();
+
+	// Sync with session events via WebSocket
+	useSessionEvents({
+		sessionId,
+		onStatusChanged: (status, stopRequested) => {
+			if (stopRequested || status === "stopped" || status === "paused") {
+				setIsStopped(true);
+				setIsThinking(false);
+			} else {
+				setIsStopped(false);
+			}
+		},
+		onNewMessage: () => {
+			// Refetch messages when a new message is added
+			if (sessionId) {
+				utils.ai.messages.list
+					.fetch({
+						service: "claude",
+						sessionId,
+					})
+					.then((msgs) => {
+						if (msgs) {
+							setMessages(
+								msgs.map((m) => ({
+									id: m.id,
+									role: m.role as "user" | "assistant",
+									content: m.content,
+								})),
+							);
+						}
+					})
+					.catch(() => {
+						// Silently ignore errors
+					});
+			}
+		},
+		onStopped: () => {
+			setIsStopped(true);
+			setIsThinking(false);
+		},
+	});
 
 	// Auto-scroll on new messages
 	useEffect(() => {
@@ -181,6 +223,24 @@ function WorkflowPage() {
 		setIsStopped(false);
 
 		try {
+			// First, sync session status with server
+			const session = await utils.ai.sessions.get.fetch({
+				service: "claude",
+				sessionId: targetSessionId,
+			});
+
+			// Update local state based on server status
+			if (
+				session?.stopRequested ||
+				session?.status === "stopped" ||
+				session?.status === "paused"
+			) {
+				setIsStopped(true);
+			} else {
+				setIsStopped(false);
+			}
+
+			// Then load messages
 			const msgs = await utils.ai.messages.list.fetch({
 				service: "claude",
 				sessionId: targetSessionId,
@@ -243,7 +303,23 @@ function WorkflowPage() {
 				err instanceof Error ? err.message : "Failed to send message";
 
 			if (errorMsg.includes("stopped") || errorMsg.includes("paused")) {
-				setIsStopped(true);
+				// Sync with server to confirm status
+				try {
+					const session = await utils.ai.sessions.get.fetch({
+						service: "claude",
+						sessionId,
+					});
+					if (
+						session?.stopRequested ||
+						session?.status === "stopped" ||
+						session?.status === "paused"
+					) {
+						setIsStopped(true);
+					}
+				} catch {
+					// If we can't check status, assume stopped
+					setIsStopped(true);
+				}
 			}
 
 			appendError(errorMsg);

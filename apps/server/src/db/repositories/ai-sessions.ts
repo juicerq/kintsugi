@@ -1,4 +1,5 @@
 import type { Kysely } from "kysely";
+import { uiEventBus } from "../../events/bus";
 import type { Database } from "../types";
 
 type AiSessionScopeColumns = {
@@ -113,12 +114,27 @@ export function createAiSessionsRepository(db: Kysely<Database>) {
 				last_error?: string | null;
 			},
 		) {
-			return await db
+			const result = await db
 				.updateTable("ai_sessions")
 				.set(data)
 				.where("id", "=", sessionId)
 				.returningAll()
 				.executeTakeFirst();
+
+			// Publish event when status-related fields change
+			if (
+				result &&
+				(data.status !== undefined || data.stop_requested !== undefined)
+			) {
+				uiEventBus.publish({
+					type: "session.statusChanged",
+					sessionId,
+					status: result.status ?? "idle",
+					stopRequested: result.stop_requested ?? 0,
+				});
+			}
+
+			return result;
 		},
 
 		async setStopRequested(sessionId: string, value: number) {

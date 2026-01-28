@@ -47,6 +47,39 @@ function createHandlers(queryClient: QueryClient): EventHandlerMap {
 		"execution.stopped": (event) => {
 			invalidateExecution(event.taskId);
 		},
+		"session.statusChanged": (event) => {
+			queryClient.invalidateQueries({
+				queryKey: [
+					["ai", "sessions", "get"],
+					{ input: { sessionId: event.sessionId } },
+				],
+			});
+			queryClient.invalidateQueries({
+				queryKey: [["ai", "sessions", "listByScope"]],
+			});
+		},
+		"session.newMessage": (event) => {
+			queryClient.invalidateQueries({
+				queryKey: [
+					["ai", "messages", "list"],
+					{ input: { sessionId: event.sessionId } },
+				],
+			});
+			queryClient.invalidateQueries({
+				queryKey: [["ai", "sessions", "listByScope"]],
+			});
+		},
+		"session.stopped": (event) => {
+			queryClient.invalidateQueries({
+				queryKey: [
+					["ai", "sessions", "get"],
+					{ input: { sessionId: event.sessionId } },
+				],
+			});
+			queryClient.invalidateQueries({
+				queryKey: [["ai", "sessions", "listByScope"]],
+			});
+		},
 	};
 }
 
