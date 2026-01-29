@@ -2,14 +2,10 @@ import {
 	createOpencode,
 	type OpencodeClient,
 	type Part,
-	type Session,
-	type Message,
 } from "@opencode-ai/sdk";
-import type { Kysely } from "kysely";
 import { db as defaultDb } from "../../db";
 import { createAiMessagesRepository } from "../../db/repositories/ai-messages";
 import { createAiSessionsRepository } from "../../db/repositories/ai-sessions";
-import type { Database } from "../../db/types";
 import { uiEventBus } from "../../events/bus";
 import { BaseAiClient } from "../core";
 import type {
@@ -325,8 +321,9 @@ export class OpenCodeClient extends BaseAiClient {
 
 	private extractText(parts: Part[]): string {
 		return parts
-			.filter((part): part is Part & { type: "text"; text: string } =>
-				part.type === "text" && "text" in part,
+			.filter(
+				(part): part is Part & { type: "text"; text: string } =>
+					part.type === "text" && "text" in part,
 			)
 			.map((part) => part.text)
 			.join("");
