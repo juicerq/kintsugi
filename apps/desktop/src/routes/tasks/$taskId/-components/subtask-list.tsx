@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Text } from "@/components/ui/text";
-import type { ModelKey } from "@/lib/types";
+import type { ModelKey, ServiceKey } from "@/lib/types";
 import { trpc } from "../../../../trpc";
 import { RunAllButton } from "./run-all-button";
+import { ServiceSelector } from "./service-selector";
 import { SubtaskCreateInput } from "./subtask-create-input";
 import { SubtaskItem } from "./subtask-item";
 import type { Subtask } from "./types";
@@ -14,6 +15,7 @@ interface SubtaskListProps {
 
 export function SubtaskList({ taskId, subtasks }: SubtaskListProps) {
 	const [expandedId, setExpandedId] = useState<string | null>(null);
+	const [service, setService] = useState<ServiceKey>("claude");
 
 	const { data: executionStatus } = trpc.execution.getStatus.useQuery(
 		{ taskId },
@@ -32,11 +34,11 @@ export function SubtaskList({ taskId, subtasks }: SubtaskListProps) {
 	}
 
 	function handleRunAll(modelKey: ModelKey) {
-		runAll.mutate({ taskId, modelKey });
+		runAll.mutate({ taskId, modelKey, service });
 	}
 
 	function handleRunSingle(subtaskId: string, modelKey: ModelKey) {
-		runSingle.mutate({ taskId, subtaskId, modelKey });
+		runSingle.mutate({ taskId, subtaskId, modelKey, service });
 	}
 
 	function handleStop() {
@@ -50,11 +52,14 @@ export function SubtaskList({ taskId, subtasks }: SubtaskListProps) {
 					Subtasks
 				</Text>
 				{subtasks.length > 0 && (
-					<RunAllButton
-						isExecuting={isExecuting}
-						onRun={handleRunAll}
-						onStop={handleStop}
-					/>
+					<div className="flex items-center gap-2">
+						<ServiceSelector value={service} onChange={setService} />
+						<RunAllButton
+							isExecuting={isExecuting}
+							onRun={handleRunAll}
+							onStop={handleStop}
+						/>
+					</div>
 				)}
 			</div>
 			<div className="flex flex-col gap-2">

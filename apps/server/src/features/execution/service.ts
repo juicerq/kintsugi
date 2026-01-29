@@ -26,6 +26,7 @@ namespace ExecutionService {
 			currentSubtaskId: null,
 			currentSessionId: null,
 			error: null,
+			service,
 		};
 		runs.set(taskId, run);
 
@@ -87,6 +88,7 @@ namespace ExecutionService {
 			currentSubtaskId: null,
 			currentSessionId: null,
 			error: null,
+			service,
 		};
 		runs.set(taskId, run);
 
@@ -115,7 +117,7 @@ namespace ExecutionService {
 
 		if (run.currentSessionId) {
 			AiService.stopSession({
-				service: "claude",
+				service: run.service,
 				sessionId: run.currentSessionId,
 			});
 		}

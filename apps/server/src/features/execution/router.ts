@@ -8,16 +8,19 @@ import { buildExecutionPrompt } from "./build-prompt";
 import { ExecutionService } from "./service";
 
 const modelKeySchema = z.enum(modelKeys as [string, ...string[]]);
+const serviceSchema = z.enum(["claude", "opencode"]).default("claude");
 
 const schemas = {
 	runAll: z.object({
 		taskId: z.string().uuid(),
 		modelKey: modelKeySchema,
+		service: serviceSchema,
 	}),
 	runSingle: z.object({
 		taskId: z.string().uuid(),
 		subtaskId: z.string().uuid(),
 		modelKey: modelKeySchema,
+		service: serviceSchema,
 	}),
 	stop: z.object({
 		taskId: z.string().uuid(),
@@ -47,6 +50,7 @@ export function createExecutionRouter(deps: Deps) {
 					input.taskId,
 					serviceDeps,
 					input.modelKey as Parameters<typeof ExecutionService.runAll>[2],
+					input.service as Parameters<typeof ExecutionService.runAll>[3],
 				);
 				return { started: true };
 			}),
@@ -59,6 +63,7 @@ export function createExecutionRouter(deps: Deps) {
 					input.taskId,
 					serviceDeps,
 					input.modelKey as Parameters<typeof ExecutionService.runSingle>[3],
+					input.service as Parameters<typeof ExecutionService.runSingle>[4],
 				);
 				return { started: true };
 			}),

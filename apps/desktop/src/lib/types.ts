@@ -2,6 +2,8 @@ import type { RouterOutputs } from "@kintsugi/shared";
 
 export type WorkflowStep = "brainstorm" | "architecture" | "review";
 
+export type ServiceKey = "claude" | "opencode";
+
 export type ModelKey =
 	| "opus-4.5"
 	| "sonnet-4.5"
