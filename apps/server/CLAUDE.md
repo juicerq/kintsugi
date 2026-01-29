@@ -18,8 +18,12 @@ src/
 │   └── migrations/    # Auto-run on startup
 ├── lib/
 │   ├── trpc.ts        # tRPC base
-│   └── safe.ts        # Error handling (Result type)
+│   ├── safe.ts        # Result type + withErrorHandler
+│   └── logger.ts      # JSONL async logger
 └── router.ts          # Root router
+logs/                   # Gitignored
+├── sessions/{id}.jsonl
+└── daily/{date}.jsonl
 ```
 
 ## Convenções
@@ -50,11 +54,26 @@ Inferir quando possível: `z.infer<typeof schema>`, Kysely types. `types.ts` só
 
 ### Error Handling
 
-Sem try-catch. Early returns + `safe()` helper para operações falíveis.
+Sem try-catch. `safe()` para Result, `withErrorHandler()` para log + rethrow.
 
 ```ts
-const result = await safe(db.selectFrom("x").execute());
+// Result pattern
+const result = await safe(promise);
 if (!result.ok) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+// Log + rethrow (substitui try-catch)
+return withErrorHandler(fn, onError, { rethrowOnly?: predicate });
+```
+
+### Logging
+
+JSONL async. Dual-write: `logs/daily/` + `logs/sessions/`. Cleanup 30d no startup.
+
+```ts
+logger.info("msg", { ctx });
+logger.error("msg", error, { ctx });
+logger.forSession(id).info("msg");  // escreve em ambos
+truncate(str, max?)                  // para content longo
 ```
 
 ### Kysely
