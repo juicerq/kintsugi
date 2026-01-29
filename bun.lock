@@ -63,6 +63,7 @@
       "name": "@kintsugi/server",
       "version": "0.1.0",
       "dependencies": {
+        "@opencode-ai/sdk": "^1.1.40",
         "@trpc/server": "^11.1.2",
         "kysely": "^0.28.10",
         "kysely-bun-sqlite": "^0.4.0",
@@ -251,6 +252,8 @@
     "@kintsugi/server": ["@kintsugi/server@workspace:apps/server"],
 
     "@kintsugi/shared": ["@kintsugi/shared@workspace:packages/shared"],
+
+    "@opencode-ai/sdk": ["@opencode-ai/sdk@1.1.40", "", {}, "sha512-WBSe7FXsUyAjYiQQQTDjQi/vG3yrfGQTQoJbHd/vQiwsNwEB8uAZ07eviez61QxPaf43cAJR+I2pJQid5aepEQ=="],
 
     "@radix-ui/number": ["@radix-ui/number@1.1.1", "", {}, "sha512-MkKCwxlXTgz6CFoJx3pCwn07GKp36+aZyu/u2Ln2VrA5DcdyCZkASEDBTd8x5whTQQL5CiYf4prXKLcgQdv29g=="],
 

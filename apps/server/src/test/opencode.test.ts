@@ -1,255 +1,356 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import type { OpencodeClient } from "@opencode-ai/sdk";
+import { modelsMap } from "../ai/models";
 import { OpenCodeClient } from "../ai/services/opencode";
-import type {
-	OpenCodeSdk,
-	OpenCodeSessionAbortInput,
-	OpenCodeSessionCreateInput,
-	OpenCodeSessionGetInput,
-	OpenCodeSessionListInput,
-	OpenCodeSessionMessagesInput,
-	OpenCodeSessionPromptInput,
-} from "../ai/types";
+import { createTestDb } from "./helpers";
 
-type OpenCodeCalls = {
-	create: OpenCodeSessionCreateInput[];
-	list: OpenCodeSessionListInput[];
-	get: OpenCodeSessionGetInput[];
-	abort: OpenCodeSessionAbortInput[];
-	messages: OpenCodeSessionMessagesInput[];
-	prompt: OpenCodeSessionPromptInput[];
+const MODEL = modelsMap["haiku-4.5"].opencode;
+
+type MockSession = {
+	create: Array<{ body?: { title?: string } }>;
+	get: Array<{ path: { id: string } }>;
+	abort: Array<{ path: { id: string } }>;
+	prompt: Array<{
+		path: { id: string };
+		body: {
+			parts: Array<{ type: string; text?: string }>;
+			model?: { providerID: string; modelID: string };
+		};
+	}>;
 };
 
-function createSdk(overrides?: Partial<OpenCodeSdk>) {
-	const calls: OpenCodeCalls = {
+function createMockClient(overrides?: {
+	createResult?: { id: string; title?: string };
+	promptResult?: { info: { id: string }; parts: Array<{ type: string; text?: string }> };
+}) {
+	let sessionCounter = 0;
+
+	const calls: MockSession = {
 		create: [],
-		list: [],
 		get: [],
 		abort: [],
-		messages: [],
 		prompt: [],
 	};
 
-	const sdk: OpenCodeSdk = {
+	const client = {
 		session: {
-			create: async (input) => {
+			create: async (input: { body?: { title?: string } }) => {
 				calls.create.push(input);
-				return { id: "session-1", metadata: input.body.metadata };
+				sessionCounter++;
+				return {
+					data: overrides?.createResult ?? { id: `sdk-session-${sessionCounter}`, title: input.body?.title },
+				};
 			},
-			list: async (input) => {
-				if (input) {
-					calls.list.push(input);
-				}
-				return [];
-			},
-			get: async (input) => {
+			get: async (input: { path: { id: string } }) => {
 				calls.get.push(input);
-				return null;
+				return { data: null };
 			},
-			abort: async (input) => {
+			abort: async (input: { path: { id: string } }) => {
 				calls.abort.push(input);
-				return true;
+				return { data: true };
 			},
-			messages: async (input) => {
-				calls.messages.push(input);
-				return [];
-			},
-			prompt: async (input) => {
+			prompt: async (input: MockSession["prompt"][0]) => {
 				calls.prompt.push(input);
 				return {
-					info: { id: "message-1", role: "assistant" },
-					parts: [{ type: "text", text: "ok" }],
+					data: overrides?.promptResult ?? {
+						info: { id: "msg-1" },
+						parts: [{ type: "text", text: "reply" }],
+					},
 				};
 			},
 		},
-	};
+	} as unknown as OpencodeClient;
 
-	return {
-		calls,
-		sdk: overrides
-			? {
-					session: {
-						...sdk.session,
-						...overrides.session,
-					},
-				}
-			: sdk,
-	};
+	return { client, calls };
 }
 
 describe("OpenCodeClient", () => {
-	let client: OpenCodeClient;
-	let calls: OpenCodeCalls;
+	let db: Awaited<ReturnType<typeof createTestDb>>;
 
-	beforeEach(() => {
-		const setup = createSdk();
-		calls = setup.calls;
-		client = new OpenCodeClient({ sdk: setup.sdk });
+	beforeEach(async () => {
+		db = await createTestDb();
 	});
 
-	test("createSession merges metadata and scope", async () => {
-		const session = await client.createSession({
-			title: "Session",
-			scope: { projectId: "project-1" },
-			metadata: { owner: "kintsugi" },
+	test("createSession persists to database", async () => {
+		const { client: mockClient } = createMockClient();
+		const opencode = new OpenCodeClient({ db, _testClient: mockClient });
+
+		const session = await opencode.createSession({
+			title: "Test Session",
+			model: MODEL,
+			scope: { projectId: "proj-1" },
 		});
 
-		expect(calls.create).toHaveLength(1);
-		expect(calls.create[0]?.body.title).toBe("Session");
-		expect(calls.create[0]?.body.metadata).toEqual({
-			"kintsugi.scope.project_id": "project-1",
-			owner: "kintsugi",
-		});
-		expect(session.scope?.projectId).toBe("project-1");
-		expect(session.metadata?.owner).toBe("kintsugi");
+		expect(session.id).toBe("sdk-session-1");
+		expect(session.title).toBe("Test Session");
+		expect(session.scope?.projectId).toBe("proj-1");
+
+		const stored = await db
+			.selectFrom("ai_sessions")
+			.where("id", "=", session.id)
+			.selectAll()
+			.executeTakeFirst();
+
+		expect(stored).toBeDefined();
+		expect(stored?.service).toBe("opencode");
+		expect(stored?.model).toBe(MODEL);
+		expect(stored?.scope_project_id).toBe("proj-1");
 	});
 
-	test("listSessions filters by metadata", async () => {
-		const setup = createSdk({
-			session: {
-				list: async (input) => {
-					if (input) {
-						calls.list.push(input);
-					}
-					return [
-						{
-							id: "a",
-							metadata: {
-								"kintsugi.scope.project_id": "project-a",
-							},
-						},
-						{
-							id: "b",
-							metadata: {
-								"kintsugi.scope.project_id": "project-b",
-							},
-						},
-					];
-				},
+	test("listSessions returns sessions from database", async () => {
+		const { client: mockClient } = createMockClient();
+		const opencode = new OpenCodeClient({ db, _testClient: mockClient });
+
+		await opencode.createSession({
+			title: "Session A",
+			scope: { projectId: "proj-1" },
+		});
+
+		await opencode.createSession({
+			title: "Session B",
+			scope: { projectId: "proj-2" },
+		});
+
+		const all = await opencode.listSessions();
+
+		expect(all).toHaveLength(2);
+
+		const filtered = await opencode.listSessions({
+			scope: { projectId: "proj-1" },
+		});
+
+		expect(filtered).toHaveLength(1);
+		expect(filtered[0]?.title).toBe("Session A");
+	});
+
+	test("getSession returns session from database", async () => {
+		const { client: mockClient } = createMockClient();
+		const opencode = new OpenCodeClient({ db, _testClient: mockClient });
+
+		const created = await opencode.createSession({ title: "My Session" });
+
+		const session = await opencode.getSession(created.id);
+
+		expect(session).toBeDefined();
+		expect(session?.id).toBe(created.id);
+		expect(session?.title).toBe("My Session");
+	});
+
+	test("sendMessage persists user and assistant messages", async () => {
+		const { client: mockClient, calls } = createMockClient({
+			promptResult: {
+				info: { id: "assistant-msg" },
+				parts: [{ type: "text", text: "Hello back!" }],
 			},
 		});
-		client = new OpenCodeClient({ sdk: setup.sdk });
+		const opencode = new OpenCodeClient({ db, _testClient: mockClient });
 
-		const sessions = await client.listSessions({
-			scope: { projectId: "project-a" },
-			limit: 10,
-		});
+		const session = await opencode.createSession({ title: "Chat" });
 
-		expect(calls.list).toHaveLength(1);
-		expect(calls.list[0]?.query?.limit).toBe(10);
-		expect(sessions).toHaveLength(1);
-		expect(sessions[0]?.id).toBe("a");
-	});
-
-	test("getMessages converts parts to content", async () => {
-		const setup = createSdk({
-			session: {
-				messages: async (input) => {
-					calls.messages.push(input);
-					return [
-						{
-							info: { id: "m1", role: "assistant" },
-							parts: [{ type: "text", text: "hello" }],
-						},
-						{
-							info: { id: "m2", role: "assistant" },
-							parts: [
-								{ type: "text", text: "ping" },
-								{ type: "text", text: "pong" },
-							],
-						},
-					];
-				},
-			},
-		});
-		client = new OpenCodeClient({ sdk: setup.sdk });
-
-		const messages = await client.getMessages({ sessionId: "session-1" });
-
-		expect(calls.messages).toHaveLength(1);
-		expect(messages[0]?.content).toBe("hello");
-		expect(messages[1]?.content).toBe("pingpong");
-	});
-
-	test("sendMessage uses prompt and returns assistant content", async () => {
-		const setup = createSdk({
-			session: {
-				prompt: async (input) => {
-					calls.prompt.push(input);
-					return {
-						info: { id: "m1", role: "assistant" },
-						parts: [{ type: "text", text: "reply" }],
-					};
-				},
-			},
-		});
-		client = new OpenCodeClient({ sdk: setup.sdk });
-
-		const response = await client.sendMessage({
-			sessionId: "session-1",
+		const response = await opencode.sendMessage({
+			sessionId: session.id,
 			role: "user",
-			content: "hello",
+			content: "Hello",
 		});
+
+		expect(response.role).toBe("assistant");
+		expect(response.content).toBe("Hello back!");
+
+		const messages = await db
+			.selectFrom("ai_messages")
+			.where("session_id", "=", session.id)
+			.orderBy("created_at", "asc")
+			.selectAll()
+			.execute();
+
+		expect(messages).toHaveLength(2);
+		expect(messages[0]?.role).toBe("user");
+		expect(messages[0]?.content).toBe("Hello");
+		expect(messages[1]?.role).toBe("assistant");
+		expect(messages[1]?.content).toBe("Hello back!");
 
 		expect(calls.prompt).toHaveLength(1);
-		expect(calls.prompt[0]?.body.parts).toEqual([
-			{ type: "text", text: "hello" },
-		]);
-		expect(response.content).toBe("reply");
+		expect(calls.prompt[0]?.body.parts).toEqual([{ type: "text", text: "Hello" }]);
 	});
 
-	test("sendMessage includes model from session metadata", async () => {
-		const setup = createSdk({
-			session: {
-				get: async (input) => {
-					calls.get.push(input);
-					return {
-						id: "session-1",
-						metadata: { "kintsugi.model": "openai/gpt-5.2-codex" },
-					};
-				},
-				prompt: async (input) => {
-					calls.prompt.push(input);
-					return {
-						info: { id: "m1", role: "assistant" },
-						parts: [{ type: "text", text: "reply" }],
-					};
-				},
-			},
-		});
-		client = new OpenCodeClient({ sdk: setup.sdk });
+	test("sendMessage resolves model from session", async () => {
+		const { client: mockClient, calls } = createMockClient();
+		const opencode = new OpenCodeClient({ db, _testClient: mockClient });
 
-		await client.sendMessage({
-			sessionId: "session-1",
+		const session = await opencode.createSession({
+			title: "Chat",
+			model: "openai/gpt-5.2-codex",
+		});
+
+		await opencode.sendMessage({
+			sessionId: session.id,
 			role: "user",
-			content: "hello",
+			content: "Hi",
 		});
 
-		expect(calls.prompt).toHaveLength(1);
 		expect(calls.prompt[0]?.body.model).toEqual({
 			providerID: "openai",
 			modelID: "gpt-5.2-codex",
 		});
 	});
 
-	test("requestStop and closeSession abort the session", async () => {
-		await client.requestStop("session-1");
-		await client.closeSession("session-2");
+	test("sendMessage updates session status", async () => {
+		const { client: mockClient } = createMockClient();
+		const opencode = new OpenCodeClient({ db, _testClient: mockClient });
 
-		expect(calls.abort).toHaveLength(2);
-		expect(calls.abort[0]?.path.id).toBe("session-1");
-		expect(calls.abort[1]?.path.id).toBe("session-2");
+		const session = await opencode.createSession({ title: "Chat" });
+
+		await opencode.sendMessage({
+			sessionId: session.id,
+			role: "user",
+			content: "Hi",
+		});
+
+		const updated = await db
+			.selectFrom("ai_sessions")
+			.where("id", "=", session.id)
+			.selectAll()
+			.executeTakeFirst();
+
+		expect(updated?.status).toBe("idle");
+		expect(updated?.last_heartbeat_at).toBeDefined();
 	});
 
-	test("pause and resume send control prompts", async () => {
-		await client.pauseSession("session-1");
-		await client.resumeSession("session-1");
+	test("getMessages returns messages from database", async () => {
+		const { client: mockClient } = createMockClient();
+		const opencode = new OpenCodeClient({ db, _testClient: mockClient });
 
-		expect(calls.prompt).toHaveLength(2);
+		const session = await opencode.createSession({ title: "Chat" });
+
+		await opencode.sendMessage({
+			sessionId: session.id,
+			role: "user",
+			content: "Hello",
+		});
+
+		const messages = await opencode.getMessages({ sessionId: session.id });
+
+		expect(messages).toHaveLength(2);
+		expect(messages[0]?.role).toBe("user");
+		expect(messages[1]?.role).toBe("assistant");
+	});
+
+	test("closeSession aborts and updates status", async () => {
+		const { client: mockClient, calls } = createMockClient();
+		const opencode = new OpenCodeClient({ db, _testClient: mockClient });
+
+		const session = await opencode.createSession({ title: "Chat" });
+
+		await opencode.closeSession(session.id);
+
+		expect(calls.abort).toHaveLength(1);
+		expect(calls.abort[0]?.path.id).toBe(session.id);
+
+		const updated = await db
+			.selectFrom("ai_sessions")
+			.where("id", "=", session.id)
+			.selectAll()
+			.executeTakeFirst();
+
+		expect(updated?.status).toBe("stopped");
+	});
+
+	test("requestStop aborts and marks stop_requested", async () => {
+		const { client: mockClient, calls } = createMockClient();
+		const opencode = new OpenCodeClient({ db, _testClient: mockClient });
+
+		const session = await opencode.createSession({ title: "Chat" });
+
+		await opencode.requestStop(session.id);
+
+		expect(calls.abort).toHaveLength(1);
+
+		const updated = await db
+			.selectFrom("ai_sessions")
+			.where("id", "=", session.id)
+			.selectAll()
+			.executeTakeFirst();
+
+		expect(updated?.status).toBe("stopped");
+		expect(updated?.stop_requested).toBe(1);
+	});
+
+	test("pauseSession sends control prompt and updates status", async () => {
+		const { client: mockClient, calls } = createMockClient();
+		const opencode = new OpenCodeClient({ db, _testClient: mockClient });
+
+		const session = await opencode.createSession({ title: "Chat" });
+
+		await opencode.pauseSession(session.id);
+
+		expect(calls.prompt).toHaveLength(1);
 		expect(calls.prompt[0]?.body.parts).toEqual([
 			{ type: "text", text: "Pare e retorne agora." },
 		]);
+
+		const updated = await db
+			.selectFrom("ai_sessions")
+			.where("id", "=", session.id)
+			.selectAll()
+			.executeTakeFirst();
+
+		expect(updated?.status).toBe("paused");
+		expect(updated?.stop_requested).toBe(1);
+	});
+
+	test("resumeSession clears stop_requested and sends control prompt", async () => {
+		const { client: mockClient, calls } = createMockClient();
+		const opencode = new OpenCodeClient({ db, _testClient: mockClient });
+
+		const session = await opencode.createSession({ title: "Chat" });
+
+		await opencode.pauseSession(session.id);
+		await opencode.resumeSession(session.id);
+
+		expect(calls.prompt).toHaveLength(2);
 		expect(calls.prompt[1]?.body.parts).toEqual([
 			{ type: "text", text: "Continue de onde estava." },
 		]);
+
+		const updated = await db
+			.selectFrom("ai_sessions")
+			.where("id", "=", session.id)
+			.selectAll()
+			.executeTakeFirst();
+
+		expect(updated?.status).toBe("idle");
+		expect(updated?.stop_requested).toBe(0);
+	});
+
+	test("sendMessage rejects non-user roles", async () => {
+		const { client: mockClient } = createMockClient();
+		const opencode = new OpenCodeClient({ db, _testClient: mockClient });
+
+		const session = await opencode.createSession({ title: "Chat" });
+
+		await expect(
+			opencode.sendMessage({
+				sessionId: session.id,
+				role: "assistant",
+				content: "Hi",
+			}),
+		).rejects.toThrow("OpenCode only supports user prompts");
+	});
+
+	test("sendMessage rejects when session is stopped", async () => {
+		const { client: mockClient } = createMockClient();
+		const opencode = new OpenCodeClient({ db, _testClient: mockClient });
+
+		const session = await opencode.createSession({ title: "Chat" });
+
+		await opencode.requestStop(session.id);
+
+		await expect(
+			opencode.sendMessage({
+				sessionId: session.id,
+				role: "user",
+				content: "Hi",
+			}),
+		).rejects.toThrow("stopped");
 	});
 });

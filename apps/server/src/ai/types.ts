@@ -1,3 +1,5 @@
+import type { Kysely } from "kysely";
+import type { Database } from "../db/types";
 import type { ClaudeCodeClientConfig } from "./services/claude-code";
 
 export type AiServiceName = "claude" | "opencode";
@@ -94,87 +96,12 @@ export interface AiClient {
 	resumeSession(sessionId: string): Promise<void>;
 }
 
-export type OpenCodeSession = {
-	id: string;
-	title?: string;
-	createdAt?: string;
-	metadata?: Record<string, string>;
-};
-
-export type OpenCodePart = {
-	type: string;
-} & Record<string, unknown>;
-
-export type OpenCodeMessageInfo = {
-	id: string;
-	role: AiRole;
-	createdAt?: string;
-	metadata?: Record<string, string>;
-};
-
-export type OpenCodeMessage = {
-	info: OpenCodeMessageInfo;
-	parts: OpenCodePart[];
-};
-
-export type OpenCodeSessionCreateInput = {
-	body: {
-		title?: string;
-		metadata?: Record<string, string>;
-	};
-};
-
-export type OpenCodeSessionListInput = {
-	query?: {
-		limit?: number;
-	};
-};
-
-export type OpenCodeSessionGetInput = {
-	path: {
-		id: string;
-	};
-};
-
-export type OpenCodeSessionAbortInput = {
-	path: {
-		id: string;
-	};
-};
-
-export type OpenCodeSessionMessagesInput = {
-	path: {
-		id: string;
-	};
-};
-
-export type OpenCodeSessionPromptInput = {
-	path: {
-		id: string;
-	};
-	body: {
-		parts: OpenCodePart[];
-		model?: {
-			providerID: string;
-			modelID: string;
-		};
-		noReply?: boolean;
-	};
-};
-
-export type OpenCodeSdk = {
-	session: {
-		create(input: OpenCodeSessionCreateInput): Promise<OpenCodeSession>;
-		list(input?: OpenCodeSessionListInput): Promise<OpenCodeSession[]>;
-		get(input: OpenCodeSessionGetInput): Promise<OpenCodeSession | null>;
-		abort(input: OpenCodeSessionAbortInput): Promise<boolean>;
-		messages(input: OpenCodeSessionMessagesInput): Promise<OpenCodeMessage[]>;
-		prompt(input: OpenCodeSessionPromptInput): Promise<OpenCodeMessage>;
-	};
-};
-
 export type OpenCodeClientConfig = {
-	sdk: OpenCodeSdk;
+	db?: Kysely<Database>;
+	hostname?: string;
+	port?: number;
+	timeout?: number;
+	_testClient?: unknown;
 };
 
 export type AiServiceConfigMap = {

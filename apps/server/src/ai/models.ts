@@ -1,5 +1,12 @@
 import type { AiServiceName } from "./types";
 
+class ModelMapError extends Error {
+	constructor(modelKey: string, modelService: string) {
+		super(`Modelo "${modelKey}" não suportado para serviço "${modelService}"`);
+		this.name = "ModelMapError";
+	}
+}
+
 export const modelsMap = {
 	"opus-4.5": {
 		claude: "claude-opus-4-5",
@@ -17,12 +24,25 @@ export const modelsMap = {
 		claude: "gpt-5.2-codex",
 		opencode: "openai/gpt-5.2-codex",
 	},
-} as const satisfies Record<string, Record<AiServiceName, string>>;
+	"kimi-2.5": {
+		claude: null,
+		opencode: "kimi-for-coding/k2p5",
+	},
+} as const satisfies Record<string, Record<AiServiceName, string | null>>;
 
 export type ModelKey = keyof typeof modelsMap;
 
 export const modelKeys = Object.keys(modelsMap) as ModelKey[];
 
-export function getModelId(modelKey: ModelKey, service: AiServiceName): string {
-	return modelsMap[modelKey][service];
+export function getModelId(
+	modelKey: ModelKey,
+	service: AiServiceName,
+): string | null {
+	const modelID = modelsMap[modelKey][service];
+
+	if (modelID) {
+		throw new ModelMapError(modelKey, service);
+	}
+
+	return modelID;
 }

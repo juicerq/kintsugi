@@ -1,11 +1,12 @@
 import {
-	unstable_v2_createSession,
-	unstable_v2_resumeSession,
+	query,
+	type PermissionMode as SdkPermissionMode,
 } from "@anthropic-ai/claude-agent-sdk";
 import type { Kysely } from "kysely";
 import { db as defaultDb } from "../../db";
 import { createAiMessagesRepository } from "../../db/repositories/ai-messages";
 import { createAiSessionsRepository } from "../../db/repositories/ai-sessions";
+import { createProjectsRepository } from "../../db/repositories/projects";
 import type { Database } from "../../db/types";
 import { uiEventBus } from "../../events/bus";
 import { BaseAiClient } from "../core";
@@ -36,14 +37,19 @@ type ClaudeCodeSdkMessage = {
 	};
 };
 
-type ClaudeCodeSessionHandle = {
-	id?: string;
-	sessionId?: string;
-	session_id?: string;
-	send(message: string): Promise<void>;
-	stream(): AsyncGenerator<ClaudeCodeSdkMessage>;
-	close(): void;
+type QueryOptions = {
+	model?: string;
+	cwd?: string;
+	allowedTools?: string[];
+	permissionMode?: SdkPermissionMode;
+	pathToClaudeCodeExecutable?: string;
+	resume?: string;
 };
+
+type QueryFunction = (input: {
+	prompt: string;
+	options?: QueryOptions;
+}) => AsyncIterable<ClaudeCodeSdkMessage>;
 
 export type ClaudeCodeClientConfig = {
 	model?: string;
@@ -51,21 +57,7 @@ export type ClaudeCodeClientConfig = {
 	allowedTools?: string[];
 	permissionMode?: PermissionMode;
 	pathToClaudeCodeExecutable?: string;
-	createSession?: (input: {
-		model: string;
-		allowedTools?: string[];
-		permissionMode?: string;
-		pathToClaudeCodeExecutable?: string;
-	}) => ClaudeCodeSessionHandle;
-	resumeSession?: (
-		sessionId: string,
-		input: {
-			model: string;
-			allowedTools?: string[];
-			permissionMode?: string;
-			pathToClaudeCodeExecutable?: string;
-		},
-	) => ClaudeCodeSessionHandle;
+	queryFn?: QueryFunction;
 };
 
 class SessionControlError extends Error {
@@ -79,25 +71,16 @@ export class ClaudeCodeClient extends BaseAiClient {
 	readonly service = "claude" as const;
 	private sessionsRepo: ReturnType<typeof createAiSessionsRepository>;
 	private messagesRepo: ReturnType<typeof createAiMessagesRepository>;
-	private sessionCache = new Map<string, ClaudeCodeSessionHandle>();
-	private createSessionHandler: (input: {
-		model: string;
-		pathToClaudeCodeExecutable?: string;
-	}) => ClaudeCodeSessionHandle;
-	private resumeSessionHandler: (
-		sessionId: string,
-		input: { model: string; pathToClaudeCodeExecutable?: string },
-	) => ClaudeCodeSessionHandle;
+	private projectsRepo: ReturnType<typeof createProjectsRepository>;
+	private queryFn: QueryFunction;
 
 	constructor(private config: ClaudeCodeClientConfig) {
 		super();
 		const db = config.db ?? defaultDb;
 		this.sessionsRepo = createAiSessionsRepository(db);
 		this.messagesRepo = createAiMessagesRepository(db);
-		this.createSessionHandler =
-			config.createSession ?? unstable_v2_createSession;
-		this.resumeSessionHandler =
-			config.resumeSession ?? unstable_v2_resumeSession;
+		this.projectsRepo = createProjectsRepository(db);
+		this.queryFn = config.queryFn ?? query;
 	}
 
 	async createSession(input: CreateSessionInput): Promise<AiSession> {
@@ -109,27 +92,30 @@ export class ClaudeCodeClient extends BaseAiClient {
 			throw new Error("Claude Code model not configured");
 		}
 
+		const repoPath = await this.resolveRepoPath(input.scope);
+
+		if (!repoPath) {
+			throw new Error("repoPath required for Claude Code sessions");
+		}
+
 		const allowedTools = input.allowedTools ?? this.config.allowedTools;
-		const permissionMode = input.permissionMode ?? this.config.permissionMode;
+		const permissionMode = (input.permissionMode ??
+			this.config.permissionMode) as SdkPermissionMode | undefined;
 		const pathToClaudeCodeExecutable = this.config.pathToClaudeCodeExecutable;
 
-		const opts = {
+		const opts: QueryOptions = {
 			model,
+			cwd: repoPath,
 			...(allowedTools && { allowedTools }),
 			...(permissionMode && { permissionMode }),
 			...(pathToClaudeCodeExecutable && { pathToClaudeCodeExecutable }),
 		};
-		console.error("[DEBUG createSession] opts:", JSON.stringify(opts, null, 2));
 
-		const session = this.createSessionHandler(opts);
-
-		await session.send(".");
+		const stream = this.queryFn({ prompt: ".", options: opts });
 
 		let sessionId: string | null = null;
 
-		// Consume the entire stream to drain the "." bootstrap response.
-		// Breaking early leaves leftover messages that pollute the next stream() call.
-		for await (const message of session.stream()) {
+		for await (const message of stream) {
 			if (message.session_id) {
 				sessionId = message.session_id;
 			}
@@ -139,15 +125,13 @@ export class ClaudeCodeClient extends BaseAiClient {
 			throw new Error("Claude Code session ID not available");
 		}
 
-		this.sessionCache.set(sessionId, session);
-
 		const created = await this.sessionsRepo.create({
 			id: sessionId,
 			service: this.service,
 			title: input.title ?? null,
 			model,
 			scope_project_id: input.scope?.projectId ?? null,
-			scope_repo_path: input.scope?.repoPath ?? null,
+			scope_repo_path: repoPath,
 			scope_workspace_id: input.scope?.workspaceId ?? null,
 			scope_label: input.scope?.label ?? null,
 			metadata: this.serializeMetadata(metadata),
@@ -181,16 +165,6 @@ export class ClaudeCodeClient extends BaseAiClient {
 	}
 
 	async closeSession(sessionId: string): Promise<void> {
-		const session = this.sessionCache.get(sessionId);
-
-		if (!session) {
-			return;
-		}
-
-		session.close();
-
-		this.sessionCache.delete(sessionId);
-
 		await this.sessionsRepo.updateStatus(sessionId, {
 			status: "stopped",
 			last_heartbeat_at: this.now(),
@@ -209,7 +183,19 @@ export class ClaudeCodeClient extends BaseAiClient {
 	async sendMessage(input: SendMessageInput): Promise<AiMessage> {
 		await this.ensureSessionRunnable(input.sessionId);
 
-		const session = await this.getOrResumeSession(input.sessionId);
+		const sessionRow = await this.sessionsRepo.findById(input.sessionId);
+
+		if (!sessionRow) {
+			throw new Error("Session not found");
+		}
+
+		const model = sessionRow.model ?? this.config.model;
+
+		if (!model) {
+			throw new Error("Claude Code model not configured");
+		}
+
+		const repoPath = sessionRow.scope_repo_path ?? process.cwd();
 
 		const metadata = this.serializeMetadata(input.metadata);
 
@@ -231,15 +217,30 @@ export class ClaudeCodeClient extends BaseAiClient {
 			metadata,
 		});
 
+		const allowedTools = this.config.allowedTools;
+		const permissionMode = this.config.permissionMode as
+			| SdkPermissionMode
+			| undefined;
+		const pathToClaudeCodeExecutable = this.config.pathToClaudeCodeExecutable;
+
+		const opts: QueryOptions = {
+			model,
+			cwd: repoPath,
+			resume: input.sessionId,
+			...(allowedTools && { allowedTools }),
+			...(permissionMode && { permissionMode }),
+			...(pathToClaudeCodeExecutable && { pathToClaudeCodeExecutable }),
+		};
+
 		try {
-			await session.send(input.content);
+			const stream = this.queryFn({ prompt: input.content, options: opts });
 
 			const sessionId = input.sessionId;
 			const assistantChunks: string[] = [];
 			const assistantRaw: ClaudeCodeSdkMessage[] = [];
 			let assistantRole: AiRole = "assistant";
 
-			for await (const message of session.stream()) {
+			for await (const message of stream) {
 				await this.refreshHeartbeat(sessionId);
 
 				const controlReason = await this.checkControl(sessionId);
@@ -249,8 +250,6 @@ export class ClaudeCodeClient extends BaseAiClient {
 						status: controlReason,
 						last_heartbeat_at: this.now(),
 					});
-
-					this.closeCachedSession(sessionId);
 
 					throw new SessionControlError(controlReason);
 				}
@@ -312,8 +311,6 @@ export class ClaudeCodeClient extends BaseAiClient {
 			last_heartbeat_at: this.now(),
 		});
 
-		this.closeCachedSession(sessionId);
-
 		uiEventBus.publish({
 			type: "session.stopped",
 			sessionId,
@@ -333,8 +330,6 @@ export class ClaudeCodeClient extends BaseAiClient {
 			status: "paused",
 			last_heartbeat_at: this.now(),
 		});
-
-		this.closeCachedSession(sessionId);
 	}
 
 	async resumeSession(sessionId: string): Promise<void> {
@@ -352,49 +347,20 @@ export class ClaudeCodeClient extends BaseAiClient {
 		});
 	}
 
-	private async getOrResumeSession(
-		sessionId: string,
-	): Promise<ClaudeCodeSessionHandle> {
-		const cached = this.sessionCache.get(sessionId);
-
-		if (cached) {
-			return cached;
+	private async resolveRepoPath(
+		scope?: AiSessionScope,
+	): Promise<string | undefined> {
+		if (scope?.repoPath) {
+			return scope.repoPath;
 		}
 
-		const row = await this.sessionsRepo.findById(sessionId);
+		if (scope?.projectId) {
+			const project = await this.projectsRepo.findById(scope.projectId);
 
-		const model = row?.model ?? this.config.model;
-
-		if (!model) {
-			throw new Error("Claude Code model not configured");
+			return project?.path;
 		}
 
-		const allowedTools = this.config.allowedTools;
-		const permissionMode = this.config.permissionMode;
-		const pathToClaudeCodeExecutable = this.config.pathToClaudeCodeExecutable;
-
-		const resumed = this.resumeSessionHandler(sessionId, {
-			model,
-			...(allowedTools && { allowedTools }),
-			...(permissionMode && { permissionMode }),
-			...(pathToClaudeCodeExecutable && { pathToClaudeCodeExecutable }),
-		});
-
-		this.sessionCache.set(sessionId, resumed);
-
-		return resumed;
-	}
-
-	private closeCachedSession(sessionId: string) {
-		const session = this.sessionCache.get(sessionId);
-
-		if (!session) {
-			return;
-		}
-
-		session.close();
-
-		this.sessionCache.delete(sessionId);
+		return undefined;
 	}
 
 	private async ensureSessionRunnable(sessionId: string): Promise<void> {
@@ -536,10 +502,13 @@ export class ClaudeCodeClient extends BaseAiClient {
 		},
 		fallbackScope?: AiSessionScope,
 	): AiSession {
-		const scope =
-			this.scopeFromMetadata(this.parseMetadata(row.metadata)) ?? fallbackScope;
+		const metadataScope = this.scopeFromMetadata(
+			this.parseMetadata(row.metadata),
+		);
 
 		const columnScope = this.scopeFromColumns(row);
+
+		const scope = this.mergeScopes(columnScope, metadataScope, fallbackScope);
 
 		return {
 			id: row.id,
@@ -547,7 +516,7 @@ export class ClaudeCodeClient extends BaseAiClient {
 			title: row.title ?? undefined,
 			model: row.model ?? undefined,
 			createdAt: row.created_at,
-			scope: scope ?? columnScope,
+			scope,
 			metadata: this.parseMetadata(row.metadata),
 			status: (row.status ?? "idle") as AiSessionStatus,
 			stopRequested: Boolean(row.stop_requested),
@@ -555,6 +524,36 @@ export class ClaudeCodeClient extends BaseAiClient {
 			lastError: row.last_error ?? undefined,
 			raw: row,
 		};
+	}
+
+	private mergeScopes(
+		...scopes: (AiSessionScope | undefined)[]
+	): AiSessionScope | undefined {
+		const merged: AiSessionScope = {};
+		let hasValue = false;
+
+		for (const scope of scopes) {
+			if (!scope) continue;
+
+			if (scope.projectId && !merged.projectId) {
+				merged.projectId = scope.projectId;
+				hasValue = true;
+			}
+			if (scope.repoPath && !merged.repoPath) {
+				merged.repoPath = scope.repoPath;
+				hasValue = true;
+			}
+			if (scope.workspaceId && !merged.workspaceId) {
+				merged.workspaceId = scope.workspaceId;
+				hasValue = true;
+			}
+			if (scope.label && !merged.label) {
+				merged.label = scope.label;
+				hasValue = true;
+			}
+		}
+
+		return hasValue ? merged : undefined;
 	}
 
 	private scopeFromColumns(row: {

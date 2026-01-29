@@ -25,17 +25,10 @@ const aiCore = new AiCore(servicesMap, {
 		pathToClaudeCodeExecutable: resolveClaudeCodeExecutable(),
 	},
 	opencode: {
-		sdk: {
-			session: {
-				create: () => Promise.reject(new Error("OpenCode SDK not configured")),
-				list: () => Promise.reject(new Error("OpenCode SDK not configured")),
-				get: () => Promise.reject(new Error("OpenCode SDK not configured")),
-				abort: () => Promise.reject(new Error("OpenCode SDK not configured")),
-				messages: () =>
-					Promise.reject(new Error("OpenCode SDK not configured")),
-				prompt: () => Promise.reject(new Error("OpenCode SDK not configured")),
-			},
-		},
+		db,
+		hostname: "127.0.0.1",
+		port: 4096,
+		timeout: 10000,
 	},
 });
 
