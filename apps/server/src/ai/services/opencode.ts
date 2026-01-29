@@ -7,6 +7,8 @@ import { db as defaultDb } from "../../db";
 import { createAiMessagesRepository } from "../../db/repositories/ai-messages";
 import { createAiSessionsRepository } from "../../db/repositories/ai-sessions";
 import { uiEventBus } from "../../events/bus";
+import { logger, truncate } from "../../lib/logger";
+import { withErrorLog } from "../../lib/safe";
 import { BaseAiClient, SessionControlError } from "../core";
 import type {
 	AiMessage,
@@ -67,31 +69,54 @@ export class OpenCodeClient extends BaseAiClient {
 	}
 
 	async createSession(input: CreateSessionInput): Promise<AiSession> {
-		const client = await this.ensureClient();
+		return withErrorLog(
+			async () => {
+				const client = await this.ensureClient();
 
-		const sdkSession = await client.session.create({
-			body: { title: input.title },
-		});
+				const sdkSession = await client.session.create({
+					body: { title: input.title },
+				});
 
-		const session = this.unwrap(sdkSession);
+				const session = this.unwrap(sdkSession);
 
-		const created = await this.sessionsRepo.create({
-			id: session.id,
-			service: this.service,
-			title: session.title ?? input.title ?? null,
-			model: input.model ?? null,
-			scope_project_id: input.scope?.projectId ?? null,
-			scope_repo_path: input.scope?.repoPath ?? null,
-			scope_workspace_id: input.scope?.workspaceId ?? null,
-			scope_label: input.scope?.label ?? null,
-			metadata: this.serializeMetadata(
-				this.mergeMetadata(input.scope, input.metadata),
-			),
-			status: "idle",
-			stop_requested: 0,
-		});
+				const created = await this.sessionsRepo.create({
+					id: session.id,
+					service: this.service,
+					title: session.title ?? input.title ?? null,
+					model: input.model ?? null,
+					scope_project_id: input.scope?.projectId ?? null,
+					scope_repo_path: input.scope?.repoPath ?? null,
+					scope_workspace_id: input.scope?.workspaceId ?? null,
+					scope_label: input.scope?.label ?? null,
+					metadata: this.serializeMetadata(
+						this.mergeMetadata(input.scope, input.metadata),
+					),
+					status: "idle",
+					stop_requested: 0,
+				});
 
-		return this.convertToLocalSession(created, input.scope);
+				logger.info("Session created", {
+					sessionId: created.id,
+					service: this.service,
+					model: input.model,
+					scope: {
+						projectId: input.scope?.projectId,
+						repoPath: input.scope?.repoPath,
+					},
+				});
+
+				return this.convertToLocalSession(created, input.scope);
+			},
+			(error) =>
+				logger.error("Session creation failed", error, {
+					service: this.service,
+					model: input.model,
+					scope: {
+						projectId: input.scope?.projectId,
+						repoPath: input.scope?.repoPath,
+					},
+				}),
+		);
 	}
 
 	async listSessions(input?: ListSessionsInput): Promise<AiSession[]> {
@@ -137,6 +162,13 @@ export class OpenCodeClient extends BaseAiClient {
 	}
 
 	async sendMessage(input: SendMessageInput): Promise<AiMessage> {
+		const sessionLog = logger.forSession(input.sessionId);
+
+		sessionLog.info("Message sending", {
+			role: input.role,
+			contentPreview: truncate(input.content),
+		});
+
 		if (input.role !== "user") {
 			throw new Error("OpenCode only supports user prompts");
 		}
@@ -162,56 +194,64 @@ export class OpenCodeClient extends BaseAiClient {
 			metadata: this.serializeMetadata(input.metadata),
 		});
 
-		try {
-			const model = await this.resolveModel(input.sessionId);
+		return withErrorLog(
+			async () => {
+				const model = await this.resolveModel(input.sessionId);
 
-			const response = await client.session.prompt({
-				path: { id: input.sessionId },
-				body: {
-					parts: [{ type: "text", text: input.content }],
-					model,
-				},
-			});
+				const response = await client.session.prompt({
+					path: { id: input.sessionId },
+					body: {
+						parts: [{ type: "text", text: input.content }],
+						model,
+					},
+				});
 
-			const message = this.unwrap(response);
+				const message = this.unwrap(response);
 
-			const content = this.extractText(message.parts);
-			const assistantMessageId = crypto.randomUUID();
+				const content = this.extractText(message.parts);
+				const assistantMessageId = crypto.randomUUID();
 
-			const saved = await this.messagesRepo.create({
-				id: assistantMessageId,
-				session_id: input.sessionId,
-				role: "assistant",
-				content,
-				metadata: null,
-				raw: JSON.stringify(message),
-			});
+				const saved = await this.messagesRepo.create({
+					id: assistantMessageId,
+					session_id: input.sessionId,
+					role: "assistant",
+					content,
+					metadata: null,
+					raw: JSON.stringify(message),
+				});
 
-			await this.sessionsRepo.updateStatus(input.sessionId, {
-				status: "idle",
-				last_heartbeat_at: this.now(),
-			});
+				await this.sessionsRepo.updateStatus(input.sessionId, {
+					status: "idle",
+					last_heartbeat_at: this.now(),
+				});
 
-			const messageCount = await this.messagesRepo.countBySession(
-				input.sessionId,
-			);
+				const messageCount = await this.messagesRepo.countBySession(
+					input.sessionId,
+				);
 
-			uiEventBus.publish({
-				type: "session.newMessage",
-				sessionId: input.sessionId,
-				messageCount,
-			});
+				uiEventBus.publish({
+					type: "session.newMessage",
+					sessionId: input.sessionId,
+					messageCount,
+				});
 
-			return this.convertToLocalMessage(saved);
-		} catch (error) {
-			await this.sessionsRepo.updateStatus(input.sessionId, {
-				status: "failed",
-				last_error: error instanceof Error ? error.message : String(error),
-				last_heartbeat_at: this.now(),
-			});
+				sessionLog.info("Message received", {
+					role: "assistant",
+					contentPreview: truncate(content),
+				});
 
-			throw error;
-		}
+				return this.convertToLocalMessage(saved);
+			},
+			async (error) => {
+				sessionLog.error("Session failed", error);
+
+				await this.sessionsRepo.updateStatus(input.sessionId, {
+					status: "failed",
+					last_error: error.message,
+					last_heartbeat_at: this.now(),
+				});
+			},
+		);
 	}
 
 	async requestStop(sessionId: string): Promise<void> {
@@ -386,5 +426,4 @@ export class OpenCodeClient extends BaseAiClient {
 			raw: row,
 		};
 	}
-
 }

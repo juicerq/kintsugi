@@ -2,6 +2,7 @@ import type { ModelKey } from "../../ai/models";
 import { AiService } from "../../ai/service";
 import type { AiServiceName } from "../../ai/types";
 import { uiEventBus } from "../../events/bus";
+import { logger } from "../../lib/logger";
 import type { ExecutionRun, ExecutionRunStatus, ExecutionServiceDeps } from "./types";
 
 function rowToRun(row: {
@@ -60,6 +61,13 @@ namespace ExecutionService {
 		const subtasks = await deps.subtasksRepo.listByTask(taskId);
 		const waiting = subtasks.filter((s) => s.status === "waiting");
 
+		logger.info("Execution started", {
+			executionId: runId,
+			taskId,
+			subtaskCount: waiting.length,
+			service,
+		});
+
 		let currentStatus: ExecutionRunStatus = "running";
 
 		for (const subtask of waiting) {
@@ -100,6 +108,7 @@ namespace ExecutionService {
 				taskId,
 				reason: "user",
 			});
+			logger.info("Execution stopped", { executionId: runId, taskId, reason: "user" });
 			return;
 		}
 
@@ -112,6 +121,7 @@ namespace ExecutionService {
 				taskId,
 				reason: "error",
 			});
+			logger.warn("Execution stopped", { executionId: runId, taskId, reason: "error" });
 			return;
 		}
 
@@ -126,6 +136,7 @@ namespace ExecutionService {
 			taskId,
 			reason: "completed",
 		});
+		logger.info("Execution completed", { executionId: runId, taskId });
 	}
 
 	export async function runSingle(
@@ -151,6 +162,13 @@ namespace ExecutionService {
 		});
 
 		uiEventBus.publish({ type: "execution.started", taskId });
+
+		logger.info("Execution started", {
+			executionId: runId,
+			taskId,
+			subtaskCount: 1,
+			service,
+		});
 
 		const result = await executeSubtask(
 			runId,
@@ -179,6 +197,12 @@ namespace ExecutionService {
 			taskId,
 			reason: result === "error" ? "error" : "completed",
 		});
+
+		if (result === "error") {
+			logger.warn("Execution stopped", { executionId: runId, taskId, reason: "error" });
+		} else {
+			logger.info("Execution completed", { executionId: runId, taskId });
+		}
 	}
 
 	export async function stop(taskId: string, deps: ExecutionServiceDeps) {
@@ -212,6 +236,8 @@ async function executeSubtask(
 		status: "in_progress",
 		started_at: new Date().toISOString(),
 	});
+
+	logger.info("Subtask started", { executionId: runId, subtaskId, taskId });
 
 	uiEventBus.publish({
 		type: "subtask.updated",
@@ -290,6 +316,8 @@ async function executeSubtask(
 			subtaskId,
 		});
 
+		logger.info("Subtask completed", { executionId: runId, subtaskId, taskId });
+
 		return "ok";
 	} catch (err) {
 		const errorMessage =
@@ -318,6 +346,8 @@ async function executeSubtask(
 			subtaskId,
 			error: errorMessage,
 		});
+
+		logger.error("Subtask failed", err instanceof Error ? err : null, { executionId: runId, subtaskId, taskId });
 
 		return "error";
 	}

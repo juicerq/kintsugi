@@ -9,6 +9,8 @@ import { createAiSessionsRepository } from "../../db/repositories/ai-sessions";
 import { createProjectsRepository } from "../../db/repositories/projects";
 import type { Database } from "../../db/types";
 import { uiEventBus } from "../../events/bus";
+import { logger, truncate } from "../../lib/logger";
+import { withErrorLog } from "../../lib/safe";
 import { BaseAiClient, SessionControlError } from "../core";
 import type {
 	AiMessage,
@@ -77,62 +79,78 @@ export class ClaudeCodeClient extends BaseAiClient {
 	}
 
 	async createSession(input: CreateSessionInput): Promise<AiSession> {
-		const metadata = this.mergeMetadata(input.scope, input.metadata);
+		return withErrorLog(
+			async () => {
+				const metadata = this.mergeMetadata(input.scope, input.metadata);
 
-		const model = input.model ?? this.config.model;
+				const model = input.model ?? this.config.model;
 
-		if (!model) {
-			throw new Error("Claude Code model not configured");
-		}
+				if (!model) {
+					throw new Error("Claude Code model not configured");
+				}
 
-		const repoPath = await this.resolveRepoPath(input.scope);
+				const repoPath = await this.resolveRepoPath(input.scope);
 
-		if (!repoPath) {
-			throw new Error("repoPath required for Claude Code sessions");
-		}
+				if (!repoPath) {
+					throw new Error("repoPath required for Claude Code sessions");
+				}
 
-		const allowedTools = input.allowedTools ?? this.config.allowedTools;
-		const permissionMode = (input.permissionMode ??
-			this.config.permissionMode) as SdkPermissionMode | undefined;
-		const pathToClaudeCodeExecutable = this.config.pathToClaudeCodeExecutable;
+				const allowedTools = input.allowedTools ?? this.config.allowedTools;
+				const permissionMode = (input.permissionMode ??
+					this.config.permissionMode) as SdkPermissionMode | undefined;
+				const pathToClaudeCodeExecutable = this.config.pathToClaudeCodeExecutable;
 
-		const opts: QueryOptions = {
-			model,
-			cwd: repoPath,
-			...(allowedTools && { allowedTools }),
-			...(permissionMode && { permissionMode }),
-			...(pathToClaudeCodeExecutable && { pathToClaudeCodeExecutable }),
-		};
+				const opts: QueryOptions = {
+					model,
+					cwd: repoPath,
+					...(allowedTools && { allowedTools }),
+					...(permissionMode && { permissionMode }),
+					...(pathToClaudeCodeExecutable && { pathToClaudeCodeExecutable }),
+				};
 
-		const stream = this.queryFn({ prompt: ".", options: opts });
+				const stream = this.queryFn({ prompt: ".", options: opts });
 
-		let sessionId: string | null = null;
+				let sessionId: string | null = null;
 
-		for await (const message of stream) {
-			if (message.session_id) {
-				sessionId = message.session_id;
-			}
-		}
+				for await (const message of stream) {
+					if (message.session_id) {
+						sessionId = message.session_id;
+					}
+				}
 
-		if (!sessionId) {
-			throw new Error("Claude Code session ID not available");
-		}
+				if (!sessionId) {
+					throw new Error("Claude Code session ID not available");
+				}
 
-		const created = await this.sessionsRepo.create({
-			id: sessionId,
-			service: this.service,
-			title: input.title ?? null,
-			model,
-			scope_project_id: input.scope?.projectId ?? null,
-			scope_repo_path: repoPath,
-			scope_workspace_id: input.scope?.workspaceId ?? null,
-			scope_label: input.scope?.label ?? null,
-			metadata: this.serializeMetadata(metadata),
-			status: "idle",
-			stop_requested: 0,
-		});
+				const created = await this.sessionsRepo.create({
+					id: sessionId,
+					service: this.service,
+					title: input.title ?? null,
+					model,
+					scope_project_id: input.scope?.projectId ?? null,
+					scope_repo_path: repoPath,
+					scope_workspace_id: input.scope?.workspaceId ?? null,
+					scope_label: input.scope?.label ?? null,
+					metadata: this.serializeMetadata(metadata),
+					status: "idle",
+					stop_requested: 0,
+				});
 
-		return this.convertToLocalSession(created, input.scope);
+				logger.info("Session created", {
+					sessionId: created.id,
+					service: this.service,
+					model,
+					scope: { projectId: input.scope?.projectId, repoPath },
+				});
+
+				return this.convertToLocalSession(created, input.scope);
+			},
+			(error) => logger.error("Session creation failed", error, {
+				service: this.service,
+				model: input.model ?? this.config.model,
+				scope: { projectId: input.scope?.projectId, repoPath: input.scope?.repoPath },
+			}),
+		);
 	}
 
 	async listSessions(input?: ListSessionsInput): Promise<AiSession[]> {
@@ -174,6 +192,9 @@ export class ClaudeCodeClient extends BaseAiClient {
 	}
 
 	async sendMessage(input: SendMessageInput): Promise<AiMessage> {
+		const sessionLog = logger.forSession(input.sessionId);
+		sessionLog.info("Message sending", { role: input.role, contentPreview: truncate(input.content) });
+
 		await this.ensureSessionRunnable(input.sessionId);
 
 		const sessionRow = await this.sessionsRepo.findById(input.sessionId);
@@ -225,76 +246,80 @@ export class ClaudeCodeClient extends BaseAiClient {
 			...(pathToClaudeCodeExecutable && { pathToClaudeCodeExecutable }),
 		};
 
-		try {
-			const stream = this.queryFn({ prompt: input.content, options: opts });
+		return withErrorLog(
+			async () => {
+				const stream = this.queryFn({ prompt: input.content, options: opts });
 
-			const sessionId = input.sessionId;
-			const assistantChunks: string[] = [];
-			const assistantRaw: ClaudeCodeSdkMessage[] = [];
-			let assistantRole: AiRole = "assistant";
+				const sessionId = input.sessionId;
+				const assistantChunks: string[] = [];
+				const assistantRaw: ClaudeCodeSdkMessage[] = [];
+				let assistantRole: AiRole = "assistant";
 
-			for await (const message of stream) {
-				await this.refreshHeartbeat(sessionId);
+				for await (const message of stream) {
+					await this.refreshHeartbeat(sessionId);
 
-				const controlReason = await this.checkControl(sessionId);
+					const controlReason = await this.checkControl(sessionId);
 
-				if (controlReason) {
-					await this.sessionsRepo.updateStatus(sessionId, {
-						status: controlReason,
-						last_heartbeat_at: this.now(),
-					});
+					if (controlReason) {
+						await this.sessionsRepo.updateStatus(sessionId, {
+							status: controlReason,
+							last_heartbeat_at: this.now(),
+						});
 
-					throw new SessionControlError(controlReason);
+						throw new SessionControlError(controlReason);
+					}
+
+					if (message.type !== "assistant" || !message.message) {
+						continue;
+					}
+
+					assistantRaw.push(message);
+					assistantRole = message.message.role ?? "assistant";
+					assistantChunks.push(...this.extractText(message.message.content));
 				}
 
-				if (message.type !== "assistant" || !message.message) {
-					continue;
-				}
+				const content = assistantChunks.join("");
+				const assistantMessageId = crypto.randomUUID();
 
-				assistantRaw.push(message);
-				assistantRole = message.message.role ?? "assistant";
-				assistantChunks.push(...this.extractText(message.message.content));
-			}
+				const saved = await this.messagesRepo.create({
+					id: assistantMessageId,
+					session_id: sessionId,
+					role: assistantRole,
+					content,
+					metadata: null,
+					raw: assistantRaw.length ? JSON.stringify(assistantRaw) : null,
+				});
 
-			const content = assistantChunks.join("");
-			const assistantMessageId = crypto.randomUUID();
+				await this.sessionsRepo.updateStatus(sessionId, {
+					status: "idle",
+					last_heartbeat_at: this.now(),
+				});
 
-			const saved = await this.messagesRepo.create({
-				id: assistantMessageId,
-				session_id: sessionId,
-				role: assistantRole,
-				content,
-				metadata: null,
-				raw: assistantRaw.length ? JSON.stringify(assistantRaw) : null,
-			});
+				const messageCount = await this.messagesRepo.countBySession(sessionId);
 
-			await this.sessionsRepo.updateStatus(sessionId, {
-				status: "idle",
-				last_heartbeat_at: this.now(),
-			});
+				uiEventBus.publish({
+					type: "session.newMessage",
+					sessionId,
+					messageCount,
+				});
 
-			const messageCount = await this.messagesRepo.countBySession(sessionId);
+				sessionLog.info("Message received", {
+					role: "assistant",
+					contentPreview: truncate(content),
+				});
 
-			uiEventBus.publish({
-				type: "session.newMessage",
-				sessionId,
-				messageCount,
-			});
-
-			return this.convertToLocalMessage(saved);
-		} catch (error) {
-			if (error instanceof SessionControlError) {
-				throw error;
-			}
-
-			await this.sessionsRepo.updateStatus(input.sessionId, {
-				status: "failed",
-				last_error: error instanceof Error ? error.message : String(error),
-				last_heartbeat_at: this.now(),
-			});
-
-			throw error;
-		}
+				return this.convertToLocalMessage(saved);
+			},
+			async (error) => {
+				sessionLog.error("Session failed", error);
+				await this.sessionsRepo.updateStatus(input.sessionId, {
+					status: "failed",
+					last_error: error.message,
+					last_heartbeat_at: this.now(),
+				});
+			},
+			{ rethrowOnly: (e) => e instanceof SessionControlError },
+		);
 	}
 
 	async requestStop(sessionId: string): Promise<void> {
