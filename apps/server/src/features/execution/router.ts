@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { modelKeys } from "../../ai/models";
+import { modelKeySchema } from "../../ai/models";
+import { aiServiceNameSchema } from "../../ai/types";
 import type { createExecutionRunsRepository } from "../../db/repositories/execution-runs";
 import type { createProjectsRepository } from "../../db/repositories/projects";
 import type { createSubtasksRepository } from "../../db/repositories/subtasks";
@@ -8,8 +9,7 @@ import { publicProcedure, router } from "../../lib/trpc";
 import { buildExecutionPrompt } from "./build-prompt";
 import { ExecutionService } from "./service";
 
-const modelKeySchema = z.enum(modelKeys as [string, ...string[]]);
-const serviceSchema = z.enum(["claude", "opencode"]).default("claude");
+const serviceSchema = aiServiceNameSchema.default("claude");
 
 const schemas = {
 	runAll: z.object({
@@ -33,7 +33,7 @@ const schemas = {
 
 type Deps = {
 	subtasksRepo: ReturnType<typeof createSubtasksRepository>;
-tasksRepo: ReturnType<typeof createTasksRepository>;
+	tasksRepo: ReturnType<typeof createTasksRepository>;
 	projectsRepo: ReturnType<typeof createProjectsRepository>;
 	executionRunsRepo: ReturnType<typeof createExecutionRunsRepository>;
 };
@@ -45,17 +45,15 @@ export function createExecutionRouter(deps: Deps) {
 	};
 
 	return router({
-		runAll: publicProcedure
-			.input(schemas.runAll)
-			.mutation(({ input }) => {
-				ExecutionService.runAll(
-					input.taskId,
-					serviceDeps,
-					input.modelKey as Parameters<typeof ExecutionService.runAll>[2],
-					input.service as Parameters<typeof ExecutionService.runAll>[3],
-				);
-				return { started: true };
-			}),
+		runAll: publicProcedure.input(schemas.runAll).mutation(({ input }) => {
+			ExecutionService.runAll(
+				input.taskId,
+				serviceDeps,
+				input.modelKey,
+				input.service,
+			);
+			return { started: true };
+		}),
 
 		runSingle: publicProcedure
 			.input(schemas.runSingle)
@@ -64,18 +62,16 @@ export function createExecutionRouter(deps: Deps) {
 					input.subtaskId,
 					input.taskId,
 					serviceDeps,
-					input.modelKey as Parameters<typeof ExecutionService.runSingle>[3],
-					input.service as Parameters<typeof ExecutionService.runSingle>[4],
+					input.modelKey,
+					input.service,
 				);
 				return { started: true };
 			}),
 
-		stop: publicProcedure
-			.input(schemas.stop)
-			.mutation(async ({ input }) => {
-				await ExecutionService.stop(input.taskId, serviceDeps);
-				return { stopped: true };
-			}),
+		stop: publicProcedure.input(schemas.stop).mutation(async ({ input }) => {
+			await ExecutionService.stop(input.taskId, serviceDeps);
+			return { stopped: true };
+		}),
 
 		getStatus: publicProcedure
 			.input(schemas.getStatus)

@@ -60,18 +60,6 @@ export async function stop(taskId: string, deps) {
 - Se subtask A termina e B começa antes do flag ser checado → B executa
 - Não há confirmação de que a sessão AI realmente parou
 
-### 3. Hardcoded Paths e Config
-
-```typescript
-pathToClaudeCodeExecutable: "/home/jui/.bun/bin/claude",
-hostname: "127.0.0.1",
-port: 4096,
-```
-
-**Problema:** Hardcoded para uma máquina específica. Não vai funcionar em outro ambiente.
-
-**Fix:** Usar env vars (`CLAUDE_EXECUTABLE_PATH`, `OPENCODE_HOST`, etc.)
-
 ### 4. Error Recovery Inexistente
 
 Se uma subtask falha:
@@ -124,18 +112,6 @@ Os dois clients têm ~60% de código similar:
 ```
 
 **Problema:** Você já tem eventos! Use subscription em vez de polling.
-
-### 9. Sem Validação de Scope
-
-```typescript
-scope: {
-  projectId: project.id,
-  repoPath: project.path, // Pode ser path inválido ou inacessível
-  label: `execute:${taskId}:${subtaskId}`,
-}
-```
-
-**Problema:** Se `project.path` não existe ou não é um repo, Claude Code vai falhar com erro confuso.
 
 ### ~~10. Sessões Órfãs~~ ✅ RESOLVIDO (parcial)
 

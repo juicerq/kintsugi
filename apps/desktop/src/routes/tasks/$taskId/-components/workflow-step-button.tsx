@@ -1,7 +1,7 @@
 import { ChevronDown, Eye, History, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { modelOptions, workflowSteps } from "@/lib/consts";
+import { modelOptions, type workflowSteps } from "@/lib/consts";
 import type { ModelKey, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { trpc } from "../../../../trpc";
@@ -132,7 +132,9 @@ export function WorkflowStepButton({
 							}}
 							className="flex w-full items-center gap-2 px-3 py-1.5 text-[11px] text-white/70 hover:bg-white/10 hover:text-white/90 transition-colors"
 						>
-							<span className={cn("w-1.5 h-1.5 rounded-full", model.dotColor)} />
+							<span
+								className={cn("w-1.5 h-1.5 rounded-full", model.dotColor)}
+							/>
 							{model.label}
 						</button>
 					))}

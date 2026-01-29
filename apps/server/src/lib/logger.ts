@@ -1,6 +1,12 @@
-import { appendFile } from "fs/promises";
-import { existsSync, mkdirSync, readdirSync, unlinkSync, statSync } from "fs";
-import { join } from "path";
+import {
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	statSync,
+	unlinkSync,
+} from "node:fs";
+import { appendFile } from "node:fs/promises";
+import { join } from "node:path";
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 type LogContext = Record<string, unknown>;
@@ -29,7 +35,7 @@ function sanitize(str: string): string {
 
 function truncate(str: string, max = MAX_CONTENT_LENGTH): string {
 	if (str.length <= max) return str;
-	return str.slice(0, max) + `...[truncated ${str.length - max} chars]`;
+	return `${str.slice(0, max)}...[truncated ${str.length - max} chars]`;
 }
 
 class AsyncLogger {
@@ -75,14 +81,19 @@ class AsyncLogger {
 
 		for (const [path, lines] of entries) {
 			try {
-				await this.writer(path, lines.join("\n") + "\n");
+				await this.writer(path, `${lines.join("\n")}\n`);
 				if (this.droppedCount > 0) {
-					console.error(`[logger] Recovered after dropping ${this.droppedCount} entries`);
+					console.error(
+						`[logger] Recovered after dropping ${this.droppedCount} entries`,
+					);
 					this.droppedCount = 0;
 				}
 			} catch (err) {
 				this.droppedCount += lines.length;
-				console.error(`[logger] Failed to write ${lines.length} entries to ${path}:`, err);
+				console.error(
+					`[logger] Failed to write ${lines.length} entries to ${path}:`,
+					err,
+				);
 			}
 		}
 	}

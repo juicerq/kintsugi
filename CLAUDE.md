@@ -43,9 +43,12 @@ bun run build          # Build completo
 
 Antes de commitar:
 ```bash
+bun run lint                           # Biome (SEMPRE rodar primeiro)
 cd apps/desktop && bunx tsc --noEmit   # Frontend types
 cd apps/server && bun test             # Backend tests
 ```
+
+Auto-fix: `bun run lint:fix`
 
 ## Gotchas
 

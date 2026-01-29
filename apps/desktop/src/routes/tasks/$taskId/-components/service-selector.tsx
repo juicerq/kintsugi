@@ -14,7 +14,8 @@ export function ServiceSelector({ value, onChange }: ServiceSelectorProps) {
 	const [open, setOpen] = useState(false);
 	const ref = useRef<HTMLDivElement>(null);
 
-	const selected = serviceOptions.find((s) => s.key === value) ?? serviceOptions[0];
+	const selected =
+		serviceOptions.find((s) => s.key === value) ?? serviceOptions[0];
 
 	useEffect(() => {
 		if (!open) return;

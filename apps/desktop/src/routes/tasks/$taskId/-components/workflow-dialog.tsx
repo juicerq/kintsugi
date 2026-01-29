@@ -23,7 +23,9 @@ export function WorkflowDialog({
 	initialTab,
 	task,
 }: WorkflowDialogProps) {
-	const [activeTab, setActiveTab] = useState<WorkflowStep>(initialTab ?? "brainstorm");
+	const [activeTab, setActiveTab] = useState<WorkflowStep>(
+		initialTab ?? "brainstorm",
+	);
 
 	useEffect(() => {
 		if (open && initialTab) {

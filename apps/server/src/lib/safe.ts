@@ -1,6 +1,8 @@
 import type { Result } from "./types";
 
-export async function safe<T>(promise: Promise<T>): Promise<Result<T, unknown>> {
+export async function safe<T>(
+	promise: Promise<T>,
+): Promise<Result<T, unknown>> {
 	return promise
 		.then((value) => ({ ok: true as const, value }))
 		.catch((error) => ({ ok: false as const, error }));

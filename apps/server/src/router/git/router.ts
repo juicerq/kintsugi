@@ -1,7 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import type { createProjectsRepository } from "../../db/repositories/projects";
-import { checkoutBranch, getCurrentBranch } from "../../features/git/operations";
+import {
+	checkoutBranch,
+	getCurrentBranch,
+} from "../../features/git/operations";
 import { publicProcedure, router } from "../../lib/trpc";
 
 const schemas = {

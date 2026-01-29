@@ -1,5 +1,5 @@
-import type { TaskListItem } from "@/lib/types";
 import { Title } from "@/components/ui/title";
+import type { TaskListItem } from "@/lib/types";
 import { TaskItem } from "./task-item";
 
 interface TaskListProps {

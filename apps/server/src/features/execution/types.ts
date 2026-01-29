@@ -26,7 +26,11 @@ export type ExecutionServiceDeps = {
 	tasksRepo: ReturnType<typeof createTasksRepository>;
 	projectsRepo: ReturnType<typeof createProjectsRepository>;
 	executionRunsRepo: ReturnType<typeof createExecutionRunsRepository>;
-	buildPrompt: (subtask: SubtaskRow, task: TaskRow, project: ProjectRow) => string;
+	buildPrompt: (
+		subtask: SubtaskRow,
+		task: TaskRow,
+		project: ProjectRow,
+	) => string;
 };
 
 type SubtaskRow = NonNullable<

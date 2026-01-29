@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { AiServiceName } from "./types";
 
 class ModelMapError extends Error {
@@ -32,7 +33,9 @@ export const modelsMap = {
 
 export type ModelKey = keyof typeof modelsMap;
 
-export const modelKeys = Object.keys(modelsMap) as ModelKey[];
+const modelKeysTuple = Object.keys(modelsMap) as [ModelKey, ...ModelKey[]];
+export const modelKeys = modelKeysTuple;
+export const modelKeySchema = z.enum(modelKeysTuple);
 
 export function getModelId(
 	modelKey: ModelKey,

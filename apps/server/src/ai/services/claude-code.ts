@@ -98,7 +98,8 @@ export class ClaudeCodeClient extends BaseAiClient {
 				const allowedTools = input.allowedTools ?? this.config.allowedTools;
 				const permissionMode = (input.permissionMode ??
 					this.config.permissionMode) as SdkPermissionMode | undefined;
-				const pathToClaudeCodeExecutable = this.config.pathToClaudeCodeExecutable;
+				const pathToClaudeCodeExecutable =
+					this.config.pathToClaudeCodeExecutable;
 
 				const opts: QueryOptions = {
 					model,
@@ -145,11 +146,15 @@ export class ClaudeCodeClient extends BaseAiClient {
 
 				return this.convertToLocalSession(created, input.scope);
 			},
-			(error) => logger.error("Session creation failed", error, {
-				service: this.service,
-				model: input.model ?? this.config.model,
-				scope: { projectId: input.scope?.projectId, repoPath: input.scope?.repoPath },
-			}),
+			(error) =>
+				logger.error("Session creation failed", error, {
+					service: this.service,
+					model: input.model ?? this.config.model,
+					scope: {
+						projectId: input.scope?.projectId,
+						repoPath: input.scope?.repoPath,
+					},
+				}),
 		);
 	}
 
@@ -193,7 +198,10 @@ export class ClaudeCodeClient extends BaseAiClient {
 
 	async sendMessage(input: SendMessageInput): Promise<AiMessage> {
 		const sessionLog = logger.forSession(input.sessionId);
-		sessionLog.info("Message sending", { role: input.role, contentPreview: truncate(input.content) });
+		sessionLog.info("Message sending", {
+			role: input.role,
+			contentPreview: truncate(input.content),
+		});
 
 		await this.ensureSessionRunnable(input.sessionId);
 
@@ -481,5 +489,4 @@ export class ClaudeCodeClient extends BaseAiClient {
 			raw: row,
 		};
 	}
-
 }

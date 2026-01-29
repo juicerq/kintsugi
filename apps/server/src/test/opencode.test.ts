@@ -21,7 +21,10 @@ type MockSession = {
 
 function createMockClient(overrides?: {
 	createResult?: { id: string; title?: string };
-	promptResult?: { info: { id: string }; parts: Array<{ type: string; text?: string }> };
+	promptResult?: {
+		info: { id: string };
+		parts: Array<{ type: string; text?: string }>;
+	};
 }) {
 	let sessionCounter = 0;
 
@@ -38,7 +41,10 @@ function createMockClient(overrides?: {
 				calls.create.push(input);
 				sessionCounter++;
 				return {
-					data: overrides?.createResult ?? { id: `sdk-session-${sessionCounter}`, title: input.body?.title },
+					data: overrides?.createResult ?? {
+						id: `sdk-session-${sessionCounter}`,
+						title: input.body?.title,
+					},
 				};
 			},
 			get: async (input: { path: { id: string } }) => {
@@ -170,7 +176,9 @@ describe("OpenCodeClient", () => {
 		expect(messages[1]?.content).toBe("Hello back!");
 
 		expect(calls.prompt).toHaveLength(1);
-		expect(calls.prompt[0]?.body.parts).toEqual([{ type: "text", text: "Hello" }]);
+		expect(calls.prompt[0]?.body.parts).toEqual([
+			{ type: "text", text: "Hello" },
+		]);
 	});
 
 	test("sendMessage resolves model from session", async () => {

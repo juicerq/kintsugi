@@ -1,7 +1,11 @@
 import { BookOpen, Lightbulb, Search } from "lucide-react";
 import type { ModelKey, ServiceKey, WorkflowStep } from "./types";
 
-export const modelOptions: { key: ModelKey; label: string; dotColor: string }[] = [
+export const modelOptions: {
+	key: ModelKey;
+	label: string;
+	dotColor: string;
+}[] = [
 	{ key: "opus-4.5", label: "Opus 4.5", dotColor: "bg-red-500" },
 	{ key: "sonnet-4.5", label: "Sonnet 4.5", dotColor: "bg-red-500" },
 	{ key: "haiku-4.5", label: "Haiku 4.5", dotColor: "bg-red-500" },
@@ -14,8 +18,18 @@ export const workflowSteps: {
 	icon: typeof Lightbulb;
 	variant: "violet" | "amber" | "emerald";
 }[] = [
-	{ key: "brainstorm", label: "Brainstorm", icon: Lightbulb, variant: "violet" },
-	{ key: "architecture", label: "Architecture", icon: BookOpen, variant: "amber" },
+	{
+		key: "brainstorm",
+		label: "Brainstorm",
+		icon: Lightbulb,
+		variant: "violet",
+	},
+	{
+		key: "architecture",
+		label: "Architecture",
+		icon: BookOpen,
+		variant: "amber",
+	},
 	{ key: "review", label: "Review", icon: Search, variant: "emerald" },
 ];
 

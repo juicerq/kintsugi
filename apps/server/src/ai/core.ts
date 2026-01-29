@@ -106,7 +106,9 @@ export abstract class BaseAiClient implements AiClient {
 		return new Date().toISOString();
 	}
 
-	protected serializeMetadata(metadata?: Record<string, string>): string | null {
+	protected serializeMetadata(
+		metadata?: Record<string, string>,
+	): string | null {
 		if (!metadata || Object.keys(metadata).length === 0) {
 			return null;
 		}
@@ -164,7 +166,9 @@ export abstract class BaseAiClient implements AiClient {
 		};
 	}
 
-	protected scopeFromColumns(row: DbSessionScopeColumns): AiSessionScope | undefined {
+	protected scopeFromColumns(
+		row: DbSessionScopeColumns,
+	): AiSessionScope | undefined {
 		const scope: AiSessionScope = {};
 
 		let hasValue = false;

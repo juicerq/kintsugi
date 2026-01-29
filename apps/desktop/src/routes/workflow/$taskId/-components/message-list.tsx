@@ -18,6 +18,7 @@ export function MessageList({
 }: MessageListProps) {
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: scroll on messages/isThinking change is intentional
 	useEffect(() => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
 	}, [messages, isThinking]);

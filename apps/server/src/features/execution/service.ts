@@ -195,7 +195,7 @@ namespace ExecutionService {
 		uiEventBus.publish({
 			type: "execution.stopped",
 			taskId,
-			reason: result === "error" ? "error" : "completed",
+			reason: resul === "error" ? "error" : "completed",
 		});
 
 		if (result === "error") {
