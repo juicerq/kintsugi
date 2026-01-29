@@ -7,10 +7,9 @@ import { db as defaultDb } from "../../db";
 import { createAiMessagesRepository } from "../../db/repositories/ai-messages";
 import { createAiSessionsRepository } from "../../db/repositories/ai-sessions";
 import { uiEventBus } from "../../events/bus";
-import { BaseAiClient } from "../core";
+import { BaseAiClient, SessionControlError } from "../core";
 import type {
 	AiMessage,
-	AiRole,
 	AiSession,
 	AiSessionScope,
 	AiSessionStatus,
@@ -280,15 +279,15 @@ export class OpenCodeClient extends BaseAiClient {
 		const status = session.status ?? "idle";
 
 		if (session.stop_requested) {
-			throw new Error(`Session ${status === "paused" ? "paused" : "stopped"}`);
+			throw new SessionControlError(status === "paused" ? "paused" : "stopped");
 		}
 
 		if (status === "paused") {
-			throw new Error("Session paused");
+			throw new SessionControlError("paused");
 		}
 
 		if (status === "stopped") {
-			throw new Error("Session stopped");
+			throw new SessionControlError("stopped");
 		}
 
 		if (status === "failed") {
@@ -345,68 +344,6 @@ export class OpenCodeClient extends BaseAiClient {
 		return result.data;
 	}
 
-	private now() {
-		return new Date().toISOString();
-	}
-
-	private scopeToColumns(scope?: AiSessionScope) {
-		if (!scope) {
-			return undefined;
-		}
-
-		return {
-			scope_project_id: scope.projectId,
-			scope_repo_path: scope.repoPath,
-			scope_workspace_id: scope.workspaceId,
-			scope_label: scope.label,
-		};
-	}
-
-	private serializeMetadata(metadata?: Record<string, string>): string | null {
-		if (!metadata || Object.keys(metadata).length === 0) {
-			return null;
-		}
-
-		const ordered: Record<string, string> = {};
-
-		for (const key of Object.keys(metadata).sort()) {
-			ordered[key] = metadata[key];
-		}
-
-		return JSON.stringify(ordered);
-	}
-
-	private parseMetadata(
-		metadata: string | null,
-	): Record<string, string> | undefined {
-		if (!metadata) {
-			return undefined;
-		}
-
-		try {
-			const parsed = JSON.parse(metadata) as Record<string, string>;
-
-			return Object.keys(parsed).length > 0 ? parsed : undefined;
-		} catch {
-			return undefined;
-		}
-	}
-
-	private metadataMatches(
-		metadata: string | null,
-		filter: Record<string, string>,
-	): boolean {
-		const parsed = this.parseMetadata(metadata) ?? {};
-
-		for (const [key, value] of Object.entries(filter)) {
-			if (parsed[key] !== value) {
-				return false;
-			}
-		}
-
-		return true;
-	}
-
 	private convertToLocalSession(
 		row: {
 			id: string;
@@ -426,10 +363,13 @@ export class OpenCodeClient extends BaseAiClient {
 		},
 		fallbackScope?: AiSessionScope,
 	): AiSession {
-		const scope =
-			this.scopeFromMetadata(this.parseMetadata(row.metadata)) ?? fallbackScope;
+		const metadataScope = this.scopeFromMetadata(
+			this.parseMetadata(row.metadata),
+		);
 
 		const columnScope = this.scopeFromColumns(row);
+
+		const scope = this.mergeScopes(columnScope, metadataScope, fallbackScope);
 
 		return {
 			id: row.id,
@@ -437,7 +377,7 @@ export class OpenCodeClient extends BaseAiClient {
 			title: row.title ?? undefined,
 			model: row.model ?? undefined,
 			createdAt: row.created_at,
-			scope: scope ?? columnScope,
+			scope,
 			metadata: this.parseMetadata(row.metadata),
 			status: (row.status ?? "idle") as AiSessionStatus,
 			stopRequested: Boolean(row.stop_requested),
@@ -447,54 +387,4 @@ export class OpenCodeClient extends BaseAiClient {
 		};
 	}
 
-	private scopeFromColumns(row: {
-		scope_project_id: string | null;
-		scope_repo_path: string | null;
-		scope_workspace_id: string | null;
-		scope_label: string | null;
-	}): AiSessionScope | undefined {
-		const scope: AiSessionScope = {};
-
-		let hasValue = false;
-
-		if (row.scope_project_id) {
-			scope.projectId = row.scope_project_id;
-			hasValue = true;
-		}
-
-		if (row.scope_repo_path) {
-			scope.repoPath = row.scope_repo_path;
-			hasValue = true;
-		}
-
-		if (row.scope_workspace_id) {
-			scope.workspaceId = row.scope_workspace_id;
-			hasValue = true;
-		}
-
-		if (row.scope_label) {
-			scope.label = row.scope_label;
-			hasValue = true;
-		}
-
-		return hasValue ? scope : undefined;
-	}
-
-	private convertToLocalMessage(message: {
-		id: string;
-		role: string;
-		content: string;
-		created_at: string;
-		metadata: string | null;
-		raw: string | null;
-	}): AiMessage {
-		return {
-			id: message.id,
-			role: message.role as AiRole,
-			content: message.content,
-			createdAt: message.created_at,
-			metadata: this.parseMetadata(message.metadata),
-			raw: message.raw ? JSON.parse(message.raw) : undefined,
-		};
-	}
 }
