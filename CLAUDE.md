@@ -1,76 +1,54 @@
 # Kintsugi
 
-Desktop application (900x600) built with Tauri 2 + React frontend + Bun tRPC backend.
+Desktop app (900x600): Tauri 2 + React + Bun tRPC.
 
-## Philosophy
-
-This codebase will outlive you. Every shortcut becomes someone else's burden. Every hack compounds into technical debt that slows the whole team down.
-
-You are not just writing code. You are shaping the future of this project. The patterns you establish will be copied. The corners you cut will be cut again.
-
-Fight entropy. Leave the codebase better than you found it.
-
-## What is Kintsugi
-
-Task management for developers with AI-powered workflow.
-
-### Core Concept
-
-- **Projects** - Containers for work (e.g., "Client X", "Side Project Y")
-- **Tasks** - Individual work items within projects
-- **Subtasks** - AI-generated implementation steps
-
-### Workflow
-
-1. Add task to project (from boss, own idea, etc.)
-2. Brainstorm → Architecture → Review (AI-assisted)
-3. AI generates subtasks based on context
-4. Each subtask runs in isolated AI session
-5. Track progress, key decisions, changed files
+Task management com AI workflow: Projects → Tasks → Brainstorm/Architecture/Review → Subtasks (AI-generated, isolated sessions).
 
 ## Stack
 
-| Layer | Technology |
-|-------|------------|
-| Desktop Shell | Tauri 2 |
-| Frontend | React 19 + TanStack Router + TanStack Query |
-| Backend | Bun + tRPC + bun:sqlite |
-| Type Safety | tRPC (end-to-end) + Zod |
-| Build | Vite + Bun |
+| Layer | Tech |
+|-------|------|
+| Shell | Tauri 2 |
+| Frontend | React 19 + TanStack Router/Query |
+| Backend | Bun + tRPC + bun:sqlite (Kysely) |
+| Types | tRPC end-to-end + Zod |
 
-## Structure
+## Estrutura
 
 ```
-kintsugi/
-├── apps/
-│   ├── desktop/     # Tauri + React frontend (see apps/desktop/CLAUDE.md)
-│   └── server/      # Bun tRPC server (see apps/server/CLAUDE.md)
-├── packages/
-│   └── shared/      # Shared types (AppRouter)
-└── package.json     # Bun workspaces
+apps/
+├── desktop/     # Tauri + React (ver apps/desktop/CLAUDE.md)
+└── server/      # Bun tRPC (ver apps/server/CLAUDE.md)
+packages/
+└── shared/      # AppRouter types
 ```
 
-## Build Commands
+## Comandos
 
 ```bash
-# Development (user only - never run these)
-bun run dev:server     # Start tRPC server
-bun run dev:desktop    # Start Tauri dev (requires server)
-
-# Building
-bun run build:server   # Compile server to sidecar
-bun run build          # Full production build
+bun run dev:server     # tRPC server
+bun run dev:desktop    # Tauri dev
+bun run build:server   # Compila sidecar
+bun run build          # Build completo
 ```
 
-## Global Conventions
+## Convenções Globais
 
-- Never use barrel imports
-- tRPC for all client-server communication (no Tauri invoke)
-- Always prefer early returns over nested conditions
-- Avoid `else` blocks whenever possible - use early returns instead
-- Avoid nested ifs - flatten logic with early returns to prevent layers of `{}` that hurt readability
+- Nunca barrel imports
+- tRPC para tudo (nunca Tauri invoke)
+- Early returns, evitar else e nested ifs
+- Planos concisos, sacrificar gramática por clareza
 
+## Verificação
 
-## Plan
+Antes de commitar:
+```bash
+cd apps/desktop && bunx tsc --noEmit   # Frontend types
+cd apps/server && bun test             # Backend tests
+```
 
-When creating a plan, always make it concise. Sacrifice grammar for the sake of clarity and conciseness.
+## Gotchas
+
+- Pastas em `routes/` sem prefixo `-` viram rotas (TanStack Router)
+- `mutateAsync` perde loading state do React Query — preferir `mutate` + callbacks
+- Schemas Zod: nunca definir output schema em procedures tRPC (inferência automática)
