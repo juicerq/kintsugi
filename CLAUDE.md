@@ -39,6 +39,36 @@ bun run build          # Build completo
 - Early returns, evitar else e nested ifs
 - Planos concisos, sacrificar gramática por clareza
 
+## TypeScript (Matt Pocock Style)
+
+### Branded Types
+IDs tipados previnem mistura acidental. Usar `Brand<T, Name>` de `lib/branded.ts`:
+- `ProjectId`, `TaskId`, `SubtaskId`, `SessionId`
+- Helper: `const taskId = id as TaskId` após validação
+
+### Validação de Shape
+`satisfies` > type assertion. Valida conformidade sem alargar tipo.
+
+### Type Guards
+Discriminated unions: usar type predicates (`e is T`) para narrowing seguro.
+
+### Literal Preservation
+`as const` em arrays/objetos para preservar tipos literais. Derivar unions: `(typeof arr)[number]`.
+
+### Inferência
+- Zod: `z.infer<typeof schema>`
+- Funções: `ReturnType<typeof fn>`, `Parameters<typeof fn>`
+- tRPC: `RouterInputs['x']['y']`, `RouterOutputs['x']['y']`
+
+### Proibições
+| Evitar | Usar |
+|--------|------|
+| `any` | `unknown` + guard |
+| `as X` | `satisfies` / guard |
+| `@ts-ignore` | investigar |
+| `enum` | `as const` union |
+| Type duplicado | Inferir da source |
+
 ## Verificação
 
 Antes de commitar:

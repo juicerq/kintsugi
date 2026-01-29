@@ -11,15 +11,6 @@ type EventHandlerMap = {
 };
 
 function createHandlers(queryClient: QueryClient): EventHandlerMap {
-	function invalidateExecution(taskId: string) {
-		queryClient.invalidateQueries({
-			queryKey: [["execution", "getStatus"], { input: { taskId } }],
-		});
-		queryClient.invalidateQueries({
-			queryKey: [["subtasks", "list"], { input: { taskId } }],
-		});
-	}
-
 	return {
 		"subtask.updated": (event) => {
 			queryClient.invalidateQueries({
@@ -32,20 +23,50 @@ function createHandlers(queryClient: QueryClient): EventHandlerMap {
 				queryKey: [["tasks", "get"], { input: { id: event.taskId } }],
 			});
 		},
+		"execution.statusChanged": (event) => {
+			const queryKey = [
+				["execution", "getStatus"],
+				{ input: { taskId: event.taskId }, type: "query" },
+			];
+
+			if (event.status === null) {
+				queryClient.setQueryData(queryKey, null);
+			} else {
+				queryClient.setQueryData(queryKey, {
+					id: event.executionId,
+					taskId: event.taskId,
+					status: event.status,
+					currentSubtaskId: event.currentSubtaskId,
+					currentSessionId: event.currentSessionId,
+					service: event.service,
+					error: event.error,
+				});
+			}
+		},
 		"execution.started": (event) => {
-			invalidateExecution(event.taskId);
+			queryClient.invalidateQueries({
+				queryKey: [["subtasks", "list"], { input: { taskId: event.taskId } }],
+			});
 		},
 		"execution.subtaskStarted": (event) => {
-			invalidateExecution(event.taskId);
+			queryClient.invalidateQueries({
+				queryKey: [["subtasks", "list"], { input: { taskId: event.taskId } }],
+			});
 		},
 		"execution.subtaskCompleted": (event) => {
-			invalidateExecution(event.taskId);
+			queryClient.invalidateQueries({
+				queryKey: [["subtasks", "list"], { input: { taskId: event.taskId } }],
+			});
 		},
 		"execution.subtaskFailed": (event) => {
-			invalidateExecution(event.taskId);
+			queryClient.invalidateQueries({
+				queryKey: [["subtasks", "list"], { input: { taskId: event.taskId } }],
+			});
 		},
 		"execution.stopped": (event) => {
-			invalidateExecution(event.taskId);
+			queryClient.invalidateQueries({
+				queryKey: [["subtasks", "list"], { input: { taskId: event.taskId } }],
+			});
 		},
 		"session.statusChanged": (event) => {
 			queryClient.invalidateQueries({

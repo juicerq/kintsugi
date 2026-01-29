@@ -19,7 +19,7 @@ export function SubtaskList({ taskId, subtasks }: SubtaskListProps) {
 
 	const { data: executionStatus } = trpc.execution.getStatus.useQuery(
 		{ taskId },
-		{ refetchInterval: 2000 },
+		{ staleTime: 5000, refetchOnWindowFocus: true },
 	);
 
 	const runAll = trpc.execution.runAll.useMutation();

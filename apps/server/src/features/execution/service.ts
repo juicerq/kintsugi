@@ -3,7 +3,11 @@ import { AiService } from "../../ai/service";
 import type { AiServiceName } from "../../ai/types";
 import { uiEventBus } from "../../events/bus";
 import { logger } from "../../lib/logger";
-import type { ExecutionRun, ExecutionRunStatus, ExecutionServiceDeps } from "./types";
+import type {
+	ExecutionRun,
+	ExecutionRunStatus,
+	ExecutionServiceDeps,
+} from "./types";
 
 function rowToRun(row: {
 	id: string;
@@ -23,6 +27,19 @@ function rowToRun(row: {
 		error: row.error,
 		service: row.service as AiServiceName,
 	};
+}
+
+function emitStatusChanged(run: ExecutionRun | null, taskId: string) {
+	uiEventBus.publish({
+		type: "execution.statusChanged",
+		taskId,
+		executionId: run?.id ?? null,
+		status: run?.status ?? null,
+		currentSubtaskId: run?.currentSubtaskId ?? null,
+		currentSessionId: run?.currentSessionId ?? null,
+		service: run?.service ?? null,
+		error: run?.error ?? null,
+	});
 }
 
 namespace ExecutionService {
@@ -57,6 +74,18 @@ namespace ExecutionService {
 		});
 
 		uiEventBus.publish({ type: "execution.started", taskId });
+		emitStatusChanged(
+			{
+				id: runId,
+				taskId,
+				status: "running",
+				currentSubtaskId: null,
+				currentSessionId: null,
+				error: null,
+				service,
+			},
+			taskId,
+		);
 
 		const subtasks = await deps.subtasksRepo.listByTask(taskId);
 		const waiting = subtasks.filter((s) => s.status === "waiting");
@@ -108,7 +137,12 @@ namespace ExecutionService {
 				taskId,
 				reason: "user",
 			});
-			logger.info("Execution stopped", { executionId: runId, taskId, reason: "user" });
+			emitStatusChanged(null, taskId);
+			logger.info("Execution stopped", {
+				executionId: runId,
+				taskId,
+				reason: "user",
+			});
 			return;
 		}
 
@@ -121,7 +155,13 @@ namespace ExecutionService {
 				taskId,
 				reason: "error",
 			});
-			logger.warn("Execution stopped", { executionId: runId, taskId, reason: "error" });
+			const errRun = await deps.executionRunsRepo.findActiveByTask(taskId);
+			emitStatusChanged(errRun ? rowToRun(errRun) : null, taskId);
+			logger.warn("Execution stopped", {
+				executionId: runId,
+				taskId,
+				reason: "error",
+			});
 			return;
 		}
 
@@ -136,6 +176,7 @@ namespace ExecutionService {
 			taskId,
 			reason: "completed",
 		});
+		emitStatusChanged(null, taskId);
 		logger.info("Execution completed", { executionId: runId, taskId });
 	}
 
@@ -162,6 +203,18 @@ namespace ExecutionService {
 		});
 
 		uiEventBus.publish({ type: "execution.started", taskId });
+		emitStatusChanged(
+			{
+				id: runId,
+				taskId,
+				status: "running",
+				currentSubtaskId: null,
+				currentSessionId: null,
+				error: null,
+				service,
+			},
+			taskId,
+		);
 
 		logger.info("Execution started", {
 			executionId: runId,
@@ -186,20 +239,27 @@ namespace ExecutionService {
 				current_session_id: null,
 				finished_at: new Date().toISOString(),
 			});
+			emitStatusChanged(null, taskId);
 		} else {
 			await deps.executionRunsRepo.update(runId, {
 				finished_at: new Date().toISOString(),
 			});
+			const errRun = await deps.executionRunsRepo.findActiveByTask(taskId);
+			emitStatusChanged(errRun ? rowToRun(errRun) : null, taskId);
 		}
 
 		uiEventBus.publish({
 			type: "execution.stopped",
 			taskId,
-			reason: resul === "error" ? "error" : "completed",
+			reason: result === "error" ? "error" : "completed",
 		});
 
 		if (result === "error") {
-			logger.warn("Execution stopped", { executionId: runId, taskId, reason: "error" });
+			logger.warn("Execution stopped", {
+				executionId: runId,
+				taskId,
+				reason: "error",
+			});
 		} else {
 			logger.info("Execution completed", { executionId: runId, taskId });
 		}
@@ -210,6 +270,18 @@ namespace ExecutionService {
 		if (!run || run.status !== "running") return;
 
 		await deps.executionRunsRepo.update(run.id, { status: "stopping" });
+		emitStatusChanged(
+			{
+				id: run.id,
+				taskId,
+				status: "stopping",
+				currentSubtaskId: run.current_subtask_id,
+				currentSessionId: run.current_session_id,
+				error: run.error,
+				service: run.service as AiServiceName,
+			},
+			taskId,
+		);
 
 		if (run.current_session_id) {
 			AiService.stopSession({
@@ -231,6 +303,18 @@ async function executeSubtask(
 	await deps.executionRunsRepo.update(runId, {
 		current_subtask_id: subtaskId,
 	});
+	emitStatusChanged(
+		{
+			id: runId,
+			taskId,
+			status: "running",
+			currentSubtaskId: subtaskId,
+			currentSessionId: null,
+			error: null,
+			service,
+		},
+		taskId,
+	);
 
 	await deps.subtasksRepo.update(subtaskId, {
 		status: "in_progress",
@@ -254,20 +338,46 @@ async function executeSubtask(
 	const subtask = await deps.subtasksRepo.findById(subtaskId);
 
 	if (!task || !subtask) {
+		const errorMsg = "Task or subtask not found";
 		await deps.executionRunsRepo.update(runId, {
 			status: "error",
-			error: "Task or subtask not found",
+			error: errorMsg,
 		});
+		emitStatusChanged(
+			{
+				id: runId,
+				taskId,
+				status: "error",
+				currentSubtaskId: subtaskId,
+				currentSessionId: null,
+				error: errorMsg,
+				service,
+			},
+			taskId,
+		);
 		return "error";
 	}
 
 	const project = await deps.projectsRepo.findById(task.project_id);
 
 	if (!project) {
+		const errorMsg = "Project not found";
 		await deps.executionRunsRepo.update(runId, {
 			status: "error",
-			error: "Project not found",
+			error: errorMsg,
 		});
+		emitStatusChanged(
+			{
+				id: runId,
+				taskId,
+				status: "error",
+				currentSubtaskId: subtaskId,
+				currentSessionId: null,
+				error: errorMsg,
+				service,
+			},
+			taskId,
+		);
 		return "error";
 	}
 
@@ -288,6 +398,18 @@ async function executeSubtask(
 		await deps.executionRunsRepo.update(runId, {
 			current_session_id: session.id,
 		});
+		emitStatusChanged(
+			{
+				id: runId,
+				taskId,
+				status: "running",
+				currentSubtaskId: subtaskId,
+				currentSessionId: session.id,
+				error: null,
+				service,
+			},
+			taskId,
+		);
 
 		const prompt = deps.buildPrompt(subtask, task, project);
 
@@ -320,8 +442,7 @@ async function executeSubtask(
 
 		return "ok";
 	} catch (err) {
-		const errorMessage =
-			err instanceof Error ? err.message : "Unknown error";
+		const errorMessage = err instanceof Error ? err.message : "Unknown error";
 
 		await deps.subtasksRepo.update(subtaskId, {
 			status: "failed",
@@ -335,6 +456,19 @@ async function executeSubtask(
 			current_subtask_id: subtaskId,
 		});
 
+		emitStatusChanged(
+			{
+				id: runId,
+				taskId,
+				status: "error",
+				currentSubtaskId: subtaskId,
+				currentSessionId: null,
+				error: errorMessage,
+				service,
+			},
+			taskId,
+		);
+
 		uiEventBus.publish({
 			type: "subtask.updated",
 			subtaskId,
@@ -347,7 +481,11 @@ async function executeSubtask(
 			error: errorMessage,
 		});
 
-		logger.error("Subtask failed", err instanceof Error ? err : null, { executionId: runId, subtaskId, taskId });
+		logger.error("Subtask failed", err instanceof Error ? err : null, {
+			executionId: runId,
+			subtaskId,
+			taskId,
+		});
 
 		return "error";
 	}
