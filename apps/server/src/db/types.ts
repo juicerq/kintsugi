@@ -69,10 +69,23 @@ export interface AiMessageTable {
 	created_at: Generated<string>;
 }
 
+export interface ExecutionRunTable {
+	id: string;
+	task_id: string;
+	status: string;
+	current_subtask_id: string | null;
+	current_session_id: string | null;
+	error: string | null;
+	service: string;
+	started_at: Generated<string>;
+	finished_at: string | null;
+}
+
 export interface Database {
 	projects: ProjectTable;
 	tasks: TaskTable;
 	subtasks: SubtaskTable;
 	ai_sessions: AiSessionTable;
 	ai_messages: AiMessageTable;
+	execution_runs: ExecutionRunTable;
 }

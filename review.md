@@ -39,37 +39,26 @@ AiCore → BaseAiClient → ClaudeCodeClient / OpenCodeClient
 
 ## Problemas Sérios
 
-### 1. Estado In-Memory no ExecutionService
+### ~~1. Estado In-Memory no ExecutionService~~ ✅ RESOLVIDO
+
+Nova tabela `execution_runs` persiste estado. Reconciliação no startup marca runs/subtasks/sessions órfãs como `error`/`failed`.
+
+### 2. Race Conditions no Stop (parcialmente resolvido)
 
 ```typescript
-const runs = new Map<string, ExecutionRun>();
-```
-
-**Problema:** Se o servidor reiniciar durante uma execução:
-
-- `runs` é perdido
-- Subtask fica em `in_progress` para sempre
-- Sessão AI órfã rodando sem controle
-- UI fica dessincronizada
-
-**Fix necessário:** Persistir `ExecutionRun` no banco ou reconciliar estado no startup.
-
-### 2. Race Conditions no Stop
-
-```typescript
-export function stop(taskId: string) {
-  run.status = "stopping"; // Flag que é checada ENTRE subtasks
-  if (run.currentSessionId) {
-    AiService.stopSession(...); // Async, não awaited
-  }
+export async function stop(taskId: string, deps) {
+  await deps.executionRunsRepo.update(run.id, { status: "stopping" });
+  // ...
 }
 ```
 
-**Problemas:**
+**Resolvido:**
+- ✅ `stop` agora é `async` e router faz `await`
+- ✅ Status persiste no DB, não mais in-memory
 
+**Ainda pendente:**
 - Se subtask A termina e B começa antes do flag ser checado → B executa
-- `stopSession` não é awaited — caller não sabe se parou
-- Não há confirmação de que a sessão realmente parou
+- Não há confirmação de que a sessão AI realmente parou
 
 ### 3. Hardcoded Paths e Config
 
@@ -148,13 +137,10 @@ scope: {
 
 **Problema:** Se `project.path` não existe ou não é um repo, Claude Code vai falhar com erro confuso.
 
-### 10. Sessões Órfãs
+### ~~10. Sessões Órfãs~~ ✅ RESOLVIDO (parcial)
 
-Quando uma execução é interrompida, a sessão AI fica no banco com `status: running`. Não há:
-
-- Cleanup de sessões antigas
-- Reconciliação no startup
-- GC de sessões órfãs
+- ✅ Reconciliação no startup marca sessões órfãs como `error`
+- ❌ Ainda não há cleanup/GC de sessões antigas completadas
 
 ---
 
@@ -193,23 +179,23 @@ Sem constantes, fácil de typar errado.
 
 | Aspecto         | Score | Notas                                              |
 | --------------- | ----- | -------------------------------------------------- |
-| **Arquitetura** | 7/10  | Boa abstração, mas estado in-memory é problema     |
+| **Arquitetura** | 8/10  | Boa abstração, estado agora persistido             |
 | **Type Safety** | 6/10  | Usa Zod e types, mas muitos `as` casts             |
 | **Error Handling** | 4/10 | Básico, sem recovery, sem retries                |
-| **Resilience**  | 3/10  | Crash = estado perdido, sem reconciliation         |
+| **Resilience**  | 6/10  | ✅ Crash recovery implementado                     |
 | **Scalability** | 5/10  | Funciona para 1 usuário, problemas com concorrência|
 | **Testability** | 7/10  | Repos mockáveis, DI presente                       |
 | **Code Quality**| 7/10  | Limpo, consistente, algumas duplicações            |
 
-**Overall: 5.5/10**
+**Overall: 6.1/10** (+0.6 após persistência)
 
 ---
 
 ## Prioridades de Fix
 
-1. **Crítico:** Persistir estado de execução no banco
+1. ~~**Crítico:** Persistir estado de execução no banco~~ ✅
 2. **Crítico:** Configurar via env vars, não hardcode
 3. **Alto:** Adicionar timeouts nas operações AI
 4. **Alto:** Trocar polling por subscription no frontend
-5. **Médio:** Cleanup de sessões órfãs
+5. ~~**Médio:** Cleanup de sessões órfãs~~ ✅ (reconciliação no startup)
 6. **Médio:** Retry/skip logic para falhas

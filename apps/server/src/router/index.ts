@@ -1,5 +1,6 @@
 import type { Kysely } from "kysely";
 import { db } from "../db";
+import { createExecutionRunsRepository } from "../db/repositories/execution-runs";
 import { createProjectsRepository } from "../db/repositories/projects";
 import { createSubtasksRepository } from "../db/repositories/subtasks";
 import { createTasksRepository } from "../db/repositories/tasks";
@@ -18,6 +19,7 @@ export function createAppRouter(database: Kysely<Database>) {
 	const projectsRepo = createProjectsRepository(database);
 	const tasksRepo = createTasksRepository(database);
 	const subtasksRepo = createSubtasksRepository(database);
+	const executionRunsRepo = createExecutionRunsRepository(database);
 
 	return router({
 		greet: greetProcedure,
@@ -28,6 +30,7 @@ export function createAppRouter(database: Kysely<Database>) {
 			subtasksRepo,
 			tasksRepo,
 			projectsRepo,
+			executionRunsRepo,
 		}),
 		git: createGitRouter(projectsRepo),
 		ai: aiRouter,

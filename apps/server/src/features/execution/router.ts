@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { modelKeys } from "../../ai/models";
+import type { createExecutionRunsRepository } from "../../db/repositories/execution-runs";
 import type { createProjectsRepository } from "../../db/repositories/projects";
 import type { createSubtasksRepository } from "../../db/repositories/subtasks";
 import type { createTasksRepository } from "../../db/repositories/tasks";
@@ -32,8 +33,9 @@ const schemas = {
 
 type Deps = {
 	subtasksRepo: ReturnType<typeof createSubtasksRepository>;
-	tasksRepo: ReturnType<typeof createTasksRepository>;
+tasksRepo: ReturnType<typeof createTasksRepository>;
 	projectsRepo: ReturnType<typeof createProjectsRepository>;
+	executionRunsRepo: ReturnType<typeof createExecutionRunsRepository>;
 };
 
 export function createExecutionRouter(deps: Deps) {
@@ -70,13 +72,15 @@ export function createExecutionRouter(deps: Deps) {
 
 		stop: publicProcedure
 			.input(schemas.stop)
-			.mutation(({ input }) => {
-				ExecutionService.stop(input.taskId);
+			.mutation(async ({ input }) => {
+				await ExecutionService.stop(input.taskId, serviceDeps);
 				return { stopped: true };
 			}),
 
 		getStatus: publicProcedure
 			.input(schemas.getStatus)
-			.query(({ input }) => ExecutionService.getStatus(input.taskId)),
+			.query(({ input }) =>
+				ExecutionService.getStatus(input.taskId, serviceDeps),
+			),
 	});
 }

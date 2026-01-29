@@ -2,13 +2,36 @@ import type { ModelKey } from "../../ai/models";
 import { AiService } from "../../ai/service";
 import type { AiServiceName } from "../../ai/types";
 import { uiEventBus } from "../../events/bus";
-import type { ExecutionRun, ExecutionServiceDeps } from "./types";
+import type { ExecutionRun, ExecutionRunStatus, ExecutionServiceDeps } from "./types";
 
-const runs = new Map<string, ExecutionRun>();
+function rowToRun(row: {
+	id: string;
+	task_id: string;
+	status: string;
+	current_subtask_id: string | null;
+	current_session_id: string | null;
+	error: string | null;
+	service: string;
+}): ExecutionRun {
+	return {
+		id: row.id,
+		taskId: row.task_id,
+		status: row.status as ExecutionRunStatus,
+		currentSubtaskId: row.current_subtask_id,
+		currentSessionId: row.current_session_id,
+		error: row.error,
+		service: row.service as AiServiceName,
+	};
+}
 
 namespace ExecutionService {
-	export function getStatus(taskId: string): ExecutionRun | null {
-		return runs.get(taskId) ?? null;
+	export async function getStatus(
+		taskId: string,
+		deps: ExecutionServiceDeps,
+	): Promise<ExecutionRun | null> {
+		const row = await deps.executionRunsRepo.findActiveByTask(taskId);
+		if (!row) return null;
+		return rowToRun(row);
 	}
 
 	export async function runAll(
@@ -17,34 +40,61 @@ namespace ExecutionService {
 		modelKey: ModelKey,
 		service: AiServiceName = "claude",
 	) {
-		const existing = runs.get(taskId);
+		const existing = await deps.executionRunsRepo.findActiveByTask(taskId);
 		if (existing && existing.status === "running") return;
 
-		const run: ExecutionRun = {
-			taskId,
+		const runId = crypto.randomUUID();
+		await deps.executionRunsRepo.create({
+			id: runId,
+			task_id: taskId,
 			status: "running",
-			currentSubtaskId: null,
-			currentSessionId: null,
+			current_subtask_id: null,
+			current_session_id: null,
 			error: null,
 			service,
-		};
-		runs.set(taskId, run);
+			finished_at: null,
+		});
 
 		uiEventBus.publish({ type: "execution.started", taskId });
 
 		const subtasks = await deps.subtasksRepo.listByTask(taskId);
 		const waiting = subtasks.filter((s) => s.status === "waiting");
 
+		let currentStatus: ExecutionRunStatus = "running";
+
 		for (const subtask of waiting) {
-			if (run.status === "stopping") break;
+			const row = await deps.executionRunsRepo.findActiveByTask(taskId);
+			if (row?.status === "stopping") {
+				currentStatus = "stopping";
+				break;
+			}
 
-			await executeSubtask(run, subtask.id, taskId, deps, modelKey, service);
+			const result = await executeSubtask(
+				runId,
+				subtask.id,
+				taskId,
+				deps,
+				modelKey,
+				service,
+			);
 
-			if (run.status === "error") break;
+			if (result === "error") {
+				currentStatus = "error";
+				break;
+			}
+			if (result === "stopping") {
+				currentStatus = "stopping";
+				break;
+			}
 		}
 
-		if (run.status === "stopping") {
-			run.status = "stopped";
+		if (currentStatus === "stopping") {
+			await deps.executionRunsRepo.update(runId, {
+				status: "stopped",
+				current_subtask_id: null,
+				current_session_id: null,
+				finished_at: new Date().toISOString(),
+			});
 			uiEventBus.publish({
 				type: "execution.stopped",
 				taskId,
@@ -53,7 +103,10 @@ namespace ExecutionService {
 			return;
 		}
 
-		if (run.status === "error") {
+		if (currentStatus === "error") {
+			await deps.executionRunsRepo.update(runId, {
+				finished_at: new Date().toISOString(),
+			});
 			uiEventBus.publish({
 				type: "execution.stopped",
 				taskId,
@@ -62,9 +115,12 @@ namespace ExecutionService {
 			return;
 		}
 
-		run.status = "completed";
-		run.currentSubtaskId = null;
-		run.currentSessionId = null;
+		await deps.executionRunsRepo.update(runId, {
+			status: "completed",
+			current_subtask_id: null,
+			current_session_id: null,
+			finished_at: new Date().toISOString(),
+		});
 		uiEventBus.publish({
 			type: "execution.stopped",
 			taskId,
@@ -79,60 +135,78 @@ namespace ExecutionService {
 		modelKey: ModelKey,
 		service: AiServiceName = "claude",
 	) {
-		const existing = runs.get(taskId);
+		const existing = await deps.executionRunsRepo.findActiveByTask(taskId);
 		if (existing && existing.status === "running") return;
 
-		const run: ExecutionRun = {
-			taskId,
+		const runId = crypto.randomUUID();
+		await deps.executionRunsRepo.create({
+			id: runId,
+			task_id: taskId,
 			status: "running",
-			currentSubtaskId: null,
-			currentSessionId: null,
+			current_subtask_id: null,
+			current_session_id: null,
 			error: null,
 			service,
-		};
-		runs.set(taskId, run);
+			finished_at: null,
+		});
 
 		uiEventBus.publish({ type: "execution.started", taskId });
 
-		await executeSubtask(run, subtaskId, taskId, deps, modelKey, service);
+		const result = await executeSubtask(
+			runId,
+			subtaskId,
+			taskId,
+			deps,
+			modelKey,
+			service,
+		);
 
-		if (run.status !== "error") {
-			run.status = "completed";
-			run.currentSubtaskId = null;
-			run.currentSessionId = null;
+		if (result !== "error") {
+			await deps.executionRunsRepo.update(runId, {
+				status: "completed",
+				current_subtask_id: null,
+				current_session_id: null,
+				finished_at: new Date().toISOString(),
+			});
+		} else {
+			await deps.executionRunsRepo.update(runId, {
+				finished_at: new Date().toISOString(),
+			});
 		}
 
 		uiEventBus.publish({
 			type: "execution.stopped",
 			taskId,
-			reason: run.status === "error" ? "error" : "completed",
+			reason: result === "error" ? "error" : "completed",
 		});
 	}
 
-	export function stop(taskId: string) {
-		const run = runs.get(taskId);
+	export async function stop(taskId: string, deps: ExecutionServiceDeps) {
+		const run = await deps.executionRunsRepo.findActiveByTask(taskId);
 		if (!run || run.status !== "running") return;
 
-		run.status = "stopping";
+		await deps.executionRunsRepo.update(run.id, { status: "stopping" });
 
-		if (run.currentSessionId) {
+		if (run.current_session_id) {
 			AiService.stopSession({
-				service: run.service,
-				sessionId: run.currentSessionId,
+				service: run.service as AiServiceName,
+				sessionId: run.current_session_id,
 			});
 		}
 	}
 }
 
 async function executeSubtask(
-	run: ExecutionRun,
+	runId: string,
 	subtaskId: string,
 	taskId: string,
 	deps: ExecutionServiceDeps,
 	modelKey: ModelKey,
 	service: AiServiceName,
-) {
-	run.currentSubtaskId = subtaskId;
+): Promise<"ok" | "error" | "stopping"> {
+	await deps.executionRunsRepo.update(runId, {
+		current_subtask_id: subtaskId,
+	});
 
 	await deps.subtasksRepo.update(subtaskId, {
 		status: "in_progress",
@@ -154,17 +228,21 @@ async function executeSubtask(
 	const subtask = await deps.subtasksRepo.findById(subtaskId);
 
 	if (!task || !subtask) {
-		run.status = "error";
-		run.error = "Task or subtask not found";
-		return;
+		await deps.executionRunsRepo.update(runId, {
+			status: "error",
+			error: "Task or subtask not found",
+		});
+		return "error";
 	}
 
 	const project = await deps.projectsRepo.findById(task.project_id);
 
 	if (!project) {
-		run.status = "error";
-		run.error = "Project not found";
-		return;
+		await deps.executionRunsRepo.update(runId, {
+			status: "error",
+			error: "Project not found",
+		});
+		return "error";
 	}
 
 	try {
@@ -181,7 +259,9 @@ async function executeSubtask(
 			permissionMode: "acceptEdits",
 		});
 
-		run.currentSessionId = session.id;
+		await deps.executionRunsRepo.update(runId, {
+			current_session_id: session.id,
+		});
 
 		const prompt = deps.buildPrompt(subtask, task, project);
 
@@ -191,7 +271,8 @@ async function executeSubtask(
 			content: prompt,
 		});
 
-		if (run.status === "stopping") return;
+		const run = await deps.executionRunsRepo.findActiveByTask(taskId);
+		if (run?.status === "stopping") return "stopping";
 
 		await deps.subtasksRepo.update(subtaskId, {
 			status: "completed",
@@ -208,6 +289,8 @@ async function executeSubtask(
 			taskId,
 			subtaskId,
 		});
+
+		return "ok";
 	} catch (err) {
 		const errorMessage =
 			err instanceof Error ? err.message : "Unknown error";
@@ -218,9 +301,11 @@ async function executeSubtask(
 			finished_at: new Date().toISOString(),
 		});
 
-		run.status = "error";
-		run.error = errorMessage;
-		run.currentSubtaskId = subtaskId;
+		await deps.executionRunsRepo.update(runId, {
+			status: "error",
+			error: errorMessage,
+			current_subtask_id: subtaskId,
+		});
 
 		uiEventBus.publish({
 			type: "subtask.updated",
@@ -233,6 +318,8 @@ async function executeSubtask(
 			subtaskId,
 			error: errorMessage,
 		});
+
+		return "error";
 	}
 }
 
