@@ -85,24 +85,6 @@ await AiService.sendMessage({ ... }); // Pode rodar indefinidamente
 
 ## Problemas Médios
 
-### 6. Type Assertions Excessivas no Router
-
-```typescript
-input.modelKey as Parameters<typeof ExecutionService.runAll>[2];
-```
-
-**Problema:** Zod já validou, mas o type system não confia. Indica schema desalinhado com os types.
-
-**Fix:** Usar `z.infer` para derivar types dos schemas.
-
-### 7. Duplicação de Lógica Claude/OpenCode
-
-Os dois clients têm ~60% de código similar:
-
-- Status update patterns
-- Message creation patterns
-- Error handling
-
 **Fix:** Mover para `BaseAiClient` ou criar mixins.
 
 ### 8. Polling no Frontend
