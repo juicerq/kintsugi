@@ -96,9 +96,9 @@ export function CreateProjectModal({
 					exit={{ opacity: 0 }}
 					transition={{ duration: 0.15 }}
 				>
-					{/* Overlay - glassmorphism */}
+					{/* Overlay */}
 					<motion.div
-						className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+						className="absolute inset-0 bg-black/60 backdrop-blur-[3px]"
 						onClick={handleClose}
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
@@ -109,22 +109,22 @@ export function CreateProjectModal({
 					<motion.div
 						className={cn(
 							"relative z-10 w-full max-w-[380px] mx-4 overflow-hidden",
-							"rounded-lg border border-white/[0.08] bg-[#0d0d0e]/95",
+							"rounded-lg border border-white/[0.08] bg-[#0d0d0e]",
 							"shadow-2xl shadow-black/50",
 						)}
-						initial={{ opacity: 0, scale: 0.96, y: 8, filter: "blur(4px)" }}
+						initial={{ opacity: 0, scale: 0.96, y: 8, filter: "blur(2px)" }}
 						animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
-						exit={{ opacity: 0, scale: 0.96, y: 8, filter: "blur(4px)" }}
+						exit={{ opacity: 0, scale: 0.96, y: 8, filter: "blur(2px)" }}
 						transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
 					>
-						{/* Radial glow at top */}
-						<div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.06)_0%,transparent_70%)]" />
+						{/* Subtle radial glow at top */}
+						<div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.03)_0%,transparent_70%)]" />
 						{/* Header */}
 						<div className="relative px-5 pt-5 pb-4 border-b border-white/[0.06]">
 							<div className="flex items-center gap-2">
 								<div className="relative">
-									<div className="absolute inset-0 rounded-full bg-white/[0.08] blur-md scale-150" />
-									<Folder className="relative size-4 text-white/50" />
+									<div className="absolute inset-0 rounded-full bg-white/[0.04] blur-sm scale-125" />
+									<Folder className="relative size-4 text-white/45" />
 								</div>
 								<Text variant="primary" size="default" weight="medium">
 									New Project
@@ -146,7 +146,7 @@ export function CreateProjectModal({
 										value={name}
 										onChange={(e) => setName(e.target.value)}
 										disabled={isSubmitting}
-										className="h-8 text-[12px] bg-white/[0.03] border-white/[0.08] transition-shadow duration-200 focus-visible:border-white/20 focus-visible:ring-0 focus-visible:shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_0_12px_rgba(255,255,255,0.08)]"
+										className="h-8 text-[12px] bg-white/[0.03] border-white/[0.08] transition-shadow duration-200 focus-visible:border-white/20 focus-visible:ring-0 focus-visible:shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_0_8px_rgba(255,255,255,0.04)]"
 									/>
 								</div>
 
@@ -161,7 +161,7 @@ export function CreateProjectModal({
 											value={path}
 											onChange={(e) => setPath(e.target.value)}
 											disabled={isSubmitting}
-											className="flex-1 h-8 text-[12px] bg-white/[0.03] border-white/[0.08] transition-shadow duration-200 focus-visible:border-white/20 focus-visible:ring-0 focus-visible:shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_0_12px_rgba(255,255,255,0.08)]"
+											className="flex-1 h-8 text-[12px] bg-white/[0.03] border-white/[0.08] transition-shadow duration-200 focus-visible:border-white/20 focus-visible:ring-0 focus-visible:shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_0_8px_rgba(255,255,255,0.04)]"
 										/>
 										<Button
 											type="button"
@@ -205,7 +205,7 @@ export function CreateProjectModal({
 										"text-[#0a0a0b] hover:bg-white",
 										"disabled:bg-white/20 disabled:text-white/40",
 										isValid && !isSubmitting
-											? "bg-[linear-gradient(110deg,rgba(255,255,255,0.9)_0%,rgba(255,255,255,1)_45%,rgba(255,255,255,0.9)_55%,rgba(255,255,255,0.9)_100%)] bg-[length:200%_100%] animate-shimmer"
+											? "bg-[linear-gradient(110deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.95)_45%,rgba(255,255,255,0.88)_55%,rgba(255,255,255,0.88)_100%)] bg-[length:200%_100%] animate-shimmer"
 											: "bg-white/90",
 									)}
 								>
