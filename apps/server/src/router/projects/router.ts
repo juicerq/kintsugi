@@ -15,6 +15,10 @@ export function createProjectsRouter(projectsRepo: ProjectsRepository) {
 	return router({
 		list: publicProcedure.query(() => projectsRepo.list()),
 
+		listWithTasks: publicProcedure.query(() =>
+			projectsRepo.listWithTasksAndRunningStatus(),
+		),
+
 		create: publicProcedure
 			.input(schemas.createProject)
 			.mutation(({ input }) => {

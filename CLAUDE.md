@@ -4,6 +4,13 @@ Desktop app (900x600): Tauri 2 + React + Bun tRPC.
 
 Task management com AI workflow: Projects → Tasks → Brainstorm/Architecture/Review → Subtasks (AI-generated, isolated sessions).
 
+## Testing Discipline
+
+- Use TDD for everything: bugs, refactors, and new features.
+- Start with a failing test that captures the expected behavior and edge cases.
+- For new features, begin with CLI-level tests (flags, output, errors) and add unit tests for core logic.
+- Verify the test fails for the right reason before implementing; keep tests green incrementally.
+
 ## Stack
 
 | Layer | Tech |

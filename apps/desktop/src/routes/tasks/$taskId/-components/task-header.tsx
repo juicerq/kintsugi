@@ -86,7 +86,7 @@ export function TaskHeader({
 	}
 
 	return (
-		<div className="w-full transition-colors p-3 rounded-md bg-white/3 hover:bg-white/4">
+		<div className="w-full transition-colors p-3 rounded-md bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_0%,transparent_95%)] hover:bg-[linear-gradient(to_right,rgba(255,255,255,0.05)_0%,transparent_95%)]">
 			{/* Main row */}
 			<div className="flex w-full items-start gap-3 -mx-1 text-left">
 				{/* Checkbox */}

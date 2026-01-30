@@ -42,6 +42,11 @@ function createHandlers(queryClient: QueryClient): EventHandlerMap {
 					error: event.error,
 				});
 			}
+
+			// Invalidate sidebar data when execution status changes
+			queryClient.invalidateQueries({
+				queryKey: [["projects", "listWithTasks"]],
+			});
 		},
 		"execution.started": (event) => {
 			queryClient.invalidateQueries({

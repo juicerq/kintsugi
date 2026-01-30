@@ -4,7 +4,6 @@ import {
 	Check,
 	CheckCheck,
 	Code,
-	Copy,
 	FileText,
 	FlaskConical,
 	Pause,
@@ -115,11 +114,6 @@ export function SubtaskItem({
 		});
 	}
 
-	function handleCopyClick(e: React.MouseEvent) {
-		e.stopPropagation();
-		navigator.clipboard.writeText(subtask.id);
-	}
-
 	function handleRunClick(e: React.MouseEvent) {
 		e.stopPropagation();
 		onRun?.();
@@ -133,7 +127,8 @@ export function SubtaskItem({
 				className={cn(
 					"group rounded-md transition-colors py-1 px-2",
 					"hover:bg-white/3",
-					isExpanded && "bg-white/4",
+					isExpanded &&
+						"bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_0%,transparent_95%)]",
 					isRunning && "bg-white/3",
 				)}
 			>
@@ -164,23 +159,6 @@ export function SubtaskItem({
 						>
 							{subtask.name}
 						</Text>
-						<div className="flex items-center gap-2">
-							<Text
-								size="xs"
-								variant="faint"
-								className="shrink-0 font-mono truncate max-w-20"
-							>
-								{subtask.id}
-							</Text>
-							<Button
-								variant="ghost"
-								className="opacity-0 group-hover:opacity-100 transition-opacity active:bg-muted"
-								size="icon-xs"
-								onClick={handleCopyClick}
-							>
-								<Copy className="size-3 stroke-accent-foreground/40" />
-							</Button>
-						</div>
 					</div>
 
 					<div className="flex-1" />

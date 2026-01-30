@@ -19,6 +19,12 @@ export type TaskListItem = RouterOutputs["tasks"]["list"][number];
 /** Project (from projects.list) */
 export type Project = RouterOutputs["projects"]["list"][number];
 
+/** Project with tasks for sidebar (from projects.listWithTasks) */
+export type SidebarProject = RouterOutputs["projects"]["listWithTasks"][number];
+
+/** Task item within a sidebar project */
+export type SidebarTask = SidebarProject["tasks"][number];
+
 /** AI session summary returned by listByScope */
 export type SessionSummary = {
 	id: string;
