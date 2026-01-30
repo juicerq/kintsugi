@@ -1,20 +1,12 @@
-import {
-	existsSync,
-	mkdirSync,
-	readdirSync,
-	statSync,
-	unlinkSync,
-} from "node:fs";
+import { readdirSync, statSync, unlinkSync } from "node:fs";
 import { appendFile } from "node:fs/promises";
 import { join } from "node:path";
+import { DAILY_DIR, ensureDataDirs, SESSIONS_DIR } from "./paths";
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 type LogContext = Record<string, unknown>;
 type Writer = (path: string, data: string) => Promise<void>;
 
-const LOGS_DIR = join(import.meta.dir, "../../logs");
-const SESSIONS_DIR = join(LOGS_DIR, "sessions");
-const DAILY_DIR = join(LOGS_DIR, "daily");
 const RETENTION_DAYS = 30;
 const FLUSH_INTERVAL_MS = 100;
 const MAX_CONTENT_LENGTH = 1024;
@@ -55,9 +47,7 @@ class AsyncLogger {
 
 	private ensureDirs() {
 		if (this.dirsEnsured) return;
-		for (const dir of [LOGS_DIR, SESSIONS_DIR, DAILY_DIR]) {
-			if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-		}
+		ensureDataDirs();
 		this.dirsEnsured = true;
 	}
 

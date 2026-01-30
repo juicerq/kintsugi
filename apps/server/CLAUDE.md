@@ -19,11 +19,9 @@ src/
 ├── lib/
 │   ├── trpc.ts        # tRPC base
 │   ├── safe.ts        # Result type + withErrorHandler
+│   ├── paths.ts       # XDG data dir resolution
 │   └── logger.ts      # JSONL async logger
 └── router.ts          # Root router
-logs/                   # Gitignored
-├── sessions/{id}.jsonl
-└── daily/{date}.jsonl
 ```
 
 ## Convenções
@@ -67,7 +65,7 @@ return withErrorHandler(fn, onError, { rethrowOnly?: predicate });
 
 ### Logging
 
-JSONL async. Dual-write: `logs/daily/` + `logs/sessions/`. Cleanup 30d no startup.
+JSONL async em `~/.local/share/kintsugi/logs/`. Dual-write: `daily/` + `sessions/`. Cleanup 30d no startup.
 
 ```ts
 logger.info("msg", { ctx });
@@ -91,7 +89,7 @@ truncate(str, max?)                  // para content longo
 
 ## Database
 
-Kysely + bun:sqlite. Arquivo: `kintsugi.db` (ou `KINTSUGI_DB_PATH`).
+Kysely + bun:sqlite. Arquivo: `~/.local/share/kintsugi/kintsugi.db` (XDG automático).
 
 ### Migrations
 
@@ -119,8 +117,14 @@ uiEventBus.publish({ type: "session.statusChanged", sessionId, status });
 
 Types em `src/events/types.ts`. Discriminated union por `type`.
 
-## Environment
+## Data Directory
 
-| Var | Default | Descrição |
-|-----|---------|-----------|
-| `KINTSUGI_DB_PATH` | `kintsugi.db` | Caminho do SQLite |
+Usa XDG automaticamente: `$XDG_DATA_HOME/kintsugi` ou `~/.local/share/kintsugi/`.
+
+```
+~/.local/share/kintsugi/
+├── kintsugi.db
+└── logs/
+    ├── daily/{date}.jsonl
+    └── sessions/{id}.jsonl
+```

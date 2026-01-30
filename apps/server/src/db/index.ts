@@ -1,10 +1,11 @@
 import { Database as BunDatabase } from "bun:sqlite";
 import { Kysely } from "kysely";
 import { BunSqliteDialect } from "kysely-bun-sqlite";
+import { DB_PATH, ensureDataDirs } from "../lib/paths";
 import { runMigrations } from "./migrations";
 import type { Database } from "./types";
 
-const DB_PATH = process.env.KINTSUGI_DB_PATH || "kintsugi.db";
+ensureDataDirs();
 
 const sqlite = new BunDatabase(DB_PATH, { create: true });
 

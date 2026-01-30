@@ -21,7 +21,7 @@ const aiCore = new AiCore(servicesMap, {
 	claude: {
 		db,
 		allowedTools: DEFAULT_ALLOWED_TOOLS,
-		permissionMode: "dontAsk",
+		permissionMode: "acceptEdits",
 		pathToClaudeCodeExecutable: resolveClaudeCodeExecutable(),
 	},
 	opencode: {
