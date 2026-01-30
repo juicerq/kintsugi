@@ -2,6 +2,7 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { applyWSSHandler } from "@trpc/server/adapters/ws";
 import { WebSocketServer } from "ws";
 import "./db";
+import { logger } from "./lib/logger";
 import { appRouter } from "./router";
 
 const PORT = 3001;
@@ -61,6 +62,19 @@ applyWSSHandler({
 	wss,
 	router: appRouter,
 	createContext: () => ({}),
+});
+
+logger.cleanup();
+logger.info("Server started", { port: PORT, wsPort: WS_PORT });
+
+process.on("SIGTERM", async () => {
+	await logger.flushNow();
+	process.exit(0);
+});
+
+process.on("SIGINT", async () => {
+	await logger.flushNow();
+	process.exit(0);
 });
 
 console.log(`kintsugi-server listening on http://localhost:${PORT}`);

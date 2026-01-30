@@ -7,10 +7,11 @@ import { db as defaultDb } from "../../db";
 import { createAiMessagesRepository } from "../../db/repositories/ai-messages";
 import { createAiSessionsRepository } from "../../db/repositories/ai-sessions";
 import { uiEventBus } from "../../events/bus";
-import { BaseAiClient } from "../core";
+import { logger, truncate } from "../../lib/logger";
+import { withErrorLog } from "../../lib/safe";
+import { BaseAiClient, SessionControlError } from "../core";
 import type {
 	AiMessage,
-	AiRole,
 	AiSession,
 	AiSessionScope,
 	AiSessionStatus,
@@ -68,31 +69,54 @@ export class OpenCodeClient extends BaseAiClient {
 	}
 
 	async createSession(input: CreateSessionInput): Promise<AiSession> {
-		const client = await this.ensureClient();
+		return withErrorLog(
+			async () => {
+				const client = await this.ensureClient();
 
-		const sdkSession = await client.session.create({
-			body: { title: input.title },
-		});
+				const sdkSession = await client.session.create({
+					body: { title: input.title },
+				});
 
-		const session = this.unwrap(sdkSession);
+				const session = this.unwrap(sdkSession);
 
-		const created = await this.sessionsRepo.create({
-			id: session.id,
-			service: this.service,
-			title: session.title ?? input.title ?? null,
-			model: input.model ?? null,
-			scope_project_id: input.scope?.projectId ?? null,
-			scope_repo_path: input.scope?.repoPath ?? null,
-			scope_workspace_id: input.scope?.workspaceId ?? null,
-			scope_label: input.scope?.label ?? null,
-			metadata: this.serializeMetadata(
-				this.mergeMetadata(input.scope, input.metadata),
-			),
-			status: "idle",
-			stop_requested: 0,
-		});
+				const created = await this.sessionsRepo.create({
+					id: session.id,
+					service: this.service,
+					title: session.title ?? input.title ?? null,
+					model: input.model ?? null,
+					scope_project_id: input.scope?.projectId ?? null,
+					scope_repo_path: input.scope?.repoPath ?? null,
+					scope_workspace_id: input.scope?.workspaceId ?? null,
+					scope_label: input.scope?.label ?? null,
+					metadata: this.serializeMetadata(
+						this.mergeMetadata(input.scope, input.metadata),
+					),
+					status: "idle",
+					stop_requested: 0,
+				});
 
-		return this.convertToLocalSession(created, input.scope);
+				logger.info("Session created", {
+					sessionId: created.id,
+					service: this.service,
+					model: input.model,
+					scope: {
+						projectId: input.scope?.projectId,
+						repoPath: input.scope?.repoPath,
+					},
+				});
+
+				return this.convertToLocalSession(created, input.scope);
+			},
+			(error) =>
+				logger.error("Session creation failed", error, {
+					service: this.service,
+					model: input.model,
+					scope: {
+						projectId: input.scope?.projectId,
+						repoPath: input.scope?.repoPath,
+					},
+				}),
+		);
 	}
 
 	async listSessions(input?: ListSessionsInput): Promise<AiSession[]> {
@@ -138,6 +162,13 @@ export class OpenCodeClient extends BaseAiClient {
 	}
 
 	async sendMessage(input: SendMessageInput): Promise<AiMessage> {
+		const sessionLog = logger.forSession(input.sessionId);
+
+		sessionLog.info("Message sending", {
+			role: input.role,
+			contentPreview: truncate(input.content),
+		});
+
 		if (input.role !== "user") {
 			throw new Error("OpenCode only supports user prompts");
 		}
@@ -163,56 +194,64 @@ export class OpenCodeClient extends BaseAiClient {
 			metadata: this.serializeMetadata(input.metadata),
 		});
 
-		try {
-			const model = await this.resolveModel(input.sessionId);
+		return withErrorLog(
+			async () => {
+				const model = await this.resolveModel(input.sessionId);
 
-			const response = await client.session.prompt({
-				path: { id: input.sessionId },
-				body: {
-					parts: [{ type: "text", text: input.content }],
-					model,
-				},
-			});
+				const response = await client.session.prompt({
+					path: { id: input.sessionId },
+					body: {
+						parts: [{ type: "text", text: input.content }],
+						model,
+					},
+				});
 
-			const message = this.unwrap(response);
+				const message = this.unwrap(response);
 
-			const content = this.extractText(message.parts);
-			const assistantMessageId = crypto.randomUUID();
+				const content = this.extractText(message.parts);
+				const assistantMessageId = crypto.randomUUID();
 
-			const saved = await this.messagesRepo.create({
-				id: assistantMessageId,
-				session_id: input.sessionId,
-				role: "assistant",
-				content,
-				metadata: null,
-				raw: JSON.stringify(message),
-			});
+				const saved = await this.messagesRepo.create({
+					id: assistantMessageId,
+					session_id: input.sessionId,
+					role: "assistant",
+					content,
+					metadata: null,
+					raw: JSON.stringify(message),
+				});
 
-			await this.sessionsRepo.updateStatus(input.sessionId, {
-				status: "idle",
-				last_heartbeat_at: this.now(),
-			});
+				await this.sessionsRepo.updateStatus(input.sessionId, {
+					status: "idle",
+					last_heartbeat_at: this.now(),
+				});
 
-			const messageCount = await this.messagesRepo.countBySession(
-				input.sessionId,
-			);
+				const messageCount = await this.messagesRepo.countBySession(
+					input.sessionId,
+				);
 
-			uiEventBus.publish({
-				type: "session.newMessage",
-				sessionId: input.sessionId,
-				messageCount,
-			});
+				uiEventBus.publish({
+					type: "session.newMessage",
+					sessionId: input.sessionId,
+					messageCount,
+				});
 
-			return this.convertToLocalMessage(saved);
-		} catch (error) {
-			await this.sessionsRepo.updateStatus(input.sessionId, {
-				status: "failed",
-				last_error: error instanceof Error ? error.message : String(error),
-				last_heartbeat_at: this.now(),
-			});
+				sessionLog.info("Message received", {
+					role: "assistant",
+					contentPreview: truncate(content),
+				});
 
-			throw error;
-		}
+				return this.convertToLocalMessage(saved);
+			},
+			async (error) => {
+				sessionLog.error("Session failed", error);
+
+				await this.sessionsRepo.updateStatus(input.sessionId, {
+					status: "failed",
+					last_error: error.message,
+					last_heartbeat_at: this.now(),
+				});
+			},
+		);
 	}
 
 	async requestStop(sessionId: string): Promise<void> {
@@ -280,15 +319,15 @@ export class OpenCodeClient extends BaseAiClient {
 		const status = session.status ?? "idle";
 
 		if (session.stop_requested) {
-			throw new Error(`Session ${status === "paused" ? "paused" : "stopped"}`);
+			throw new SessionControlError(status === "paused" ? "paused" : "stopped");
 		}
 
 		if (status === "paused") {
-			throw new Error("Session paused");
+			throw new SessionControlError("paused");
 		}
 
 		if (status === "stopped") {
-			throw new Error("Session stopped");
+			throw new SessionControlError("stopped");
 		}
 
 		if (status === "failed") {
@@ -345,68 +384,6 @@ export class OpenCodeClient extends BaseAiClient {
 		return result.data;
 	}
 
-	private now() {
-		return new Date().toISOString();
-	}
-
-	private scopeToColumns(scope?: AiSessionScope) {
-		if (!scope) {
-			return undefined;
-		}
-
-		return {
-			scope_project_id: scope.projectId,
-			scope_repo_path: scope.repoPath,
-			scope_workspace_id: scope.workspaceId,
-			scope_label: scope.label,
-		};
-	}
-
-	private serializeMetadata(metadata?: Record<string, string>): string | null {
-		if (!metadata || Object.keys(metadata).length === 0) {
-			return null;
-		}
-
-		const ordered: Record<string, string> = {};
-
-		for (const key of Object.keys(metadata).sort()) {
-			ordered[key] = metadata[key];
-		}
-
-		return JSON.stringify(ordered);
-	}
-
-	private parseMetadata(
-		metadata: string | null,
-	): Record<string, string> | undefined {
-		if (!metadata) {
-			return undefined;
-		}
-
-		try {
-			const parsed = JSON.parse(metadata) as Record<string, string>;
-
-			return Object.keys(parsed).length > 0 ? parsed : undefined;
-		} catch {
-			return undefined;
-		}
-	}
-
-	private metadataMatches(
-		metadata: string | null,
-		filter: Record<string, string>,
-	): boolean {
-		const parsed = this.parseMetadata(metadata) ?? {};
-
-		for (const [key, value] of Object.entries(filter)) {
-			if (parsed[key] !== value) {
-				return false;
-			}
-		}
-
-		return true;
-	}
-
 	private convertToLocalSession(
 		row: {
 			id: string;
@@ -426,10 +403,13 @@ export class OpenCodeClient extends BaseAiClient {
 		},
 		fallbackScope?: AiSessionScope,
 	): AiSession {
-		const scope =
-			this.scopeFromMetadata(this.parseMetadata(row.metadata)) ?? fallbackScope;
+		const metadataScope = this.scopeFromMetadata(
+			this.parseMetadata(row.metadata),
+		);
 
 		const columnScope = this.scopeFromColumns(row);
+
+		const scope = this.mergeScopes(columnScope, metadataScope, fallbackScope);
 
 		return {
 			id: row.id,
@@ -437,64 +417,13 @@ export class OpenCodeClient extends BaseAiClient {
 			title: row.title ?? undefined,
 			model: row.model ?? undefined,
 			createdAt: row.created_at,
-			scope: scope ?? columnScope,
+			scope,
 			metadata: this.parseMetadata(row.metadata),
 			status: (row.status ?? "idle") as AiSessionStatus,
 			stopRequested: Boolean(row.stop_requested),
 			lastHeartbeatAt: row.last_heartbeat_at ?? undefined,
 			lastError: row.last_error ?? undefined,
 			raw: row,
-		};
-	}
-
-	private scopeFromColumns(row: {
-		scope_project_id: string | null;
-		scope_repo_path: string | null;
-		scope_workspace_id: string | null;
-		scope_label: string | null;
-	}): AiSessionScope | undefined {
-		const scope: AiSessionScope = {};
-
-		let hasValue = false;
-
-		if (row.scope_project_id) {
-			scope.projectId = row.scope_project_id;
-			hasValue = true;
-		}
-
-		if (row.scope_repo_path) {
-			scope.repoPath = row.scope_repo_path;
-			hasValue = true;
-		}
-
-		if (row.scope_workspace_id) {
-			scope.workspaceId = row.scope_workspace_id;
-			hasValue = true;
-		}
-
-		if (row.scope_label) {
-			scope.label = row.scope_label;
-			hasValue = true;
-		}
-
-		return hasValue ? scope : undefined;
-	}
-
-	private convertToLocalMessage(message: {
-		id: string;
-		role: string;
-		content: string;
-		created_at: string;
-		metadata: string | null;
-		raw: string | null;
-	}): AiMessage {
-		return {
-			id: message.id,
-			role: message.role as AiRole,
-			content: message.content,
-			createdAt: message.created_at,
-			metadata: this.parseMetadata(message.metadata),
-			raw: message.raw ? JSON.parse(message.raw) : undefined,
 		};
 	}
 }

@@ -1,10 +1,4 @@
-import {
-	Code,
-	FileText,
-	FlaskConical,
-	RefreshCw,
-	Wrench,
-} from "lucide-react";
+import { Code, FileText, FlaskConical, RefreshCw, Wrench } from "lucide-react";
 import type { SubtaskCategory } from "./types";
 
 export const categoryConfig: Record<

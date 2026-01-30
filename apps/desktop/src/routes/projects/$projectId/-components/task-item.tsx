@@ -2,8 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { Check, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import type { TaskListItem } from "@/lib/types";
 import { Text } from "@/components/ui/text";
+import type { TaskListItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { trpc } from "../../../../trpc";
 

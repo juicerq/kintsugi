@@ -1,8 +1,10 @@
 import type { Kysely } from "kysely";
+import { z } from "zod";
 import type { Database } from "../db/types";
 import type { ClaudeCodeClientConfig } from "./services/claude-code";
 
 export type AiServiceName = "claude" | "opencode";
+export const aiServiceNameSchema = z.enum(["claude", "opencode"]);
 
 export type AiRole = "system" | "user" | "assistant" | "tool";
 

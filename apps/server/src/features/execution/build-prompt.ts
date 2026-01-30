@@ -64,10 +64,7 @@ ${task.review}`
 }
 
 function buildSubtaskSection(subtask: SubtaskRow): string {
-	const lines = [
-		`## Subtask: ${subtask.name}`,
-		"",
-	];
+	const lines = [`## Subtask: ${subtask.name}`, ""];
 
 	if (subtask.category) {
 		lines.push(`**Category:** ${subtask.category}`);

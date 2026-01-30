@@ -18,7 +18,9 @@ src/
 │   └── migrations/    # Auto-run on startup
 ├── lib/
 │   ├── trpc.ts        # tRPC base
-│   └── safe.ts        # Error handling (Result type)
+│   ├── safe.ts        # Result type + withErrorHandler
+│   ├── paths.ts       # XDG data dir resolution
+│   └── logger.ts      # JSONL async logger
 └── router.ts          # Root router
 ```
 
@@ -50,11 +52,26 @@ Inferir quando possível: `z.infer<typeof schema>`, Kysely types. `types.ts` só
 
 ### Error Handling
 
-Sem try-catch. Early returns + `safe()` helper para operações falíveis.
+Sem try-catch. `safe()` para Result, `withErrorHandler()` para log + rethrow.
 
 ```ts
-const result = await safe(db.selectFrom("x").execute());
+// Result pattern
+const result = await safe(promise);
 if (!result.ok) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+// Log + rethrow (substitui try-catch)
+return withErrorHandler(fn, onError, { rethrowOnly?: predicate });
+```
+
+### Logging
+
+JSONL async em `~/.local/share/kintsugi/logs/`. Dual-write: `daily/` + `sessions/`. Cleanup 30d no startup.
+
+```ts
+logger.info("msg", { ctx });
+logger.error("msg", error, { ctx });
+logger.forSession(id).info("msg");  // escreve em ambos
+truncate(str, max?)                  // para content longo
 ```
 
 ### Kysely
@@ -72,7 +89,7 @@ if (!result.ok) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
 ## Database
 
-Kysely + bun:sqlite. Arquivo: `kintsugi.db` (ou `KINTSUGI_DB_PATH`).
+Kysely + bun:sqlite. Arquivo: `~/.local/share/kintsugi/kintsugi.db` (XDG automático).
 
 ### Migrations
 
@@ -100,8 +117,14 @@ uiEventBus.publish({ type: "session.statusChanged", sessionId, status });
 
 Types em `src/events/types.ts`. Discriminated union por `type`.
 
-## Environment
+## Data Directory
 
-| Var | Default | Descrição |
-|-----|---------|-----------|
-| `KINTSUGI_DB_PATH` | `kintsugi.db` | Caminho do SQLite |
+Usa XDG automaticamente: `$XDG_DATA_HOME/kintsugi` ou `~/.local/share/kintsugi/`.
+
+```
+~/.local/share/kintsugi/
+├── kintsugi.db
+└── logs/
+    ├── daily/{date}.jsonl
+    └── sessions/{id}.jsonl
+```

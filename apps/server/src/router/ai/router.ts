@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { modelKeys } from "../../ai/models";
+import { modelKeySchema } from "../../ai/models";
 import { AiService } from "../../ai/service";
+import { aiServiceNameSchema } from "../../ai/types";
 import { publicProcedure, router } from "../../lib/trpc";
 
-const serviceSchema = z.enum(["claude", "opencode"]);
-const modelKeySchema = z.enum(modelKeys as [string, ...string[]]);
+const serviceSchema = aiServiceNameSchema;
 
 const scopeSchema = z.object({
 	projectId: z.string().uuid(),
@@ -76,9 +76,7 @@ const sessionsRouter = router({
 	create: publicProcedure.input(schemas.createSession).mutation(({ input }) =>
 		AiService.createSession({
 			service: input.service,
-			modelKey: input.modelKey as Parameters<
-				typeof AiService.createSession
-			>[0]["modelKey"],
+			modelKey: input.modelKey,
 			title: input.title,
 			scope: input.scope,
 			metadata: input.metadata,

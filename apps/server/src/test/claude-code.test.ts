@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { modelsMap } from "../ai/models";
-import type { AiRole } from "../ai/types";
 import { ClaudeCodeClient } from "../ai/services/claude-code";
+import type { AiRole } from "../ai/types";
 import { createProjectsRepository } from "../db/repositories/projects";
 import { createProject, createTestDb } from "./helpers";
 

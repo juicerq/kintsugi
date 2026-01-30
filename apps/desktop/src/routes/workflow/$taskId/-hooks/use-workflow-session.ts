@@ -440,6 +440,7 @@ export function useWorkflowSession({
 	}
 
 	// ─── Initialization ───
+	// biome-ignore lint/correctness/useExhaustiveDependencies: intentional one-time init with initialized.current guard
 	useEffect(() => {
 		if (initialized.current || !task || !project) return;
 		initialized.current = true;

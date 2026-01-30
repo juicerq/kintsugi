@@ -15,6 +15,16 @@ export type UiInvalidateEvent =
 			reason: "user" | "error" | "completed";
 	  }
 	| {
+			type: "execution.statusChanged";
+			taskId: string;
+			executionId: string | null;
+			status: "running" | "stopping" | "stopped" | "completed" | "error" | null;
+			currentSubtaskId: string | null;
+			currentSessionId: string | null;
+			service: string | null;
+			error: string | null;
+	  }
+	| {
 			type: "session.statusChanged";
 			sessionId: string;
 			status: string;
