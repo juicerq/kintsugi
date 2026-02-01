@@ -12,10 +12,26 @@ import {
 	Wrench,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { useState } from "react";
 import { Badge, type badgeVariants } from "@/components/ui/badge";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Text } from "@/components/ui/text";
+import {
+	modelOptionsClaude,
+	modelOptionsOpencode,
+	serviceOptions,
+} from "@/lib/consts";
+import type { ModelKey, ServiceKey } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { trpc } from "../../../../trpc";
 import { SubtaskDetails } from "./subtask-details";
@@ -26,7 +42,7 @@ interface SubtaskItemProps {
 	isExpanded: boolean;
 	isRunning: boolean;
 	onToggle: () => void;
-	onRun?: () => void;
+	onRun?: (service: ServiceKey, modelKey: ModelKey) => void;
 }
 
 type BadgeVariant = VariantProps<typeof badgeVariants>["variant"];
@@ -95,6 +111,7 @@ export function SubtaskItem({
 	onToggle,
 	onRun,
 }: SubtaskItemProps) {
+	const [runMenuOpen, setRunMenuOpen] = useState(false);
 	const utils = trpc.useUtils();
 
 	const updateSubtask = trpc.subtasks.update.useMutation({
@@ -112,11 +129,6 @@ export function SubtaskItem({
 			id: subtask.id,
 			status: isCompleted ? "waiting" : "completed",
 		});
-	}
-
-	function handleRunClick(e: React.MouseEvent) {
-		e.stopPropagation();
-		onRun?.();
 	}
 
 	const config = subtask.category ? categoryConfig[subtask.category] : null;
@@ -164,14 +176,62 @@ export function SubtaskItem({
 					<div className="flex-1" />
 
 					{subtask.status === "waiting" && onRun && !isRunning && (
-						<Button
-							variant="ghost"
-							size="icon-xs"
-							className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
-							onClick={handleRunClick}
-						>
-							<Play className="size-3 fill-current" />
-						</Button>
+						<DropdownMenu open={runMenuOpen} onOpenChange={setRunMenuOpen}>
+							<DropdownMenuTrigger asChild>
+								<Button
+									variant="ghost"
+									size="icon-xs"
+									className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+									onClick={(e) => e.stopPropagation()}
+								>
+									<Play className="size-3 fill-current" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent
+								align="end"
+								side="bottom"
+								sideOffset={4}
+								className="w-[160px]"
+								onCloseAutoFocus={(e) => e.preventDefault()}
+							>
+								{serviceOptions.map((service) => (
+									<DropdownMenuSub key={service.key}>
+										<DropdownMenuSubTrigger className="gap-2 text-xs text-white/70">
+											<span
+												className={cn(
+													"h-1.5 w-1.5 rounded-full",
+													service.dotColor,
+												)}
+											/>
+											{service.label}
+										</DropdownMenuSubTrigger>
+										<DropdownMenuSubContent className="w-[160px]">
+											{(service.key === "claude"
+												? modelOptionsClaude
+												: modelOptionsOpencode
+											).map((model) => (
+												<DropdownMenuItem
+													key={model.key}
+													className="gap-2 text-xs text-white/70 focus:text-white/90"
+													onClick={() => {
+														setRunMenuOpen(false);
+														onRun(service.key, model.key);
+													}}
+												>
+													<span
+														className={cn(
+															"h-1.5 w-1.5 rounded-full",
+															model.dotColor,
+														)}
+													/>
+													{model.label}
+												</DropdownMenuItem>
+											))}
+										</DropdownMenuSubContent>
+									</DropdownMenuSub>
+								))}
+							</DropdownMenuContent>
+						</DropdownMenu>
 					)}
 
 					{config && (

@@ -1,8 +1,23 @@
 import { ChevronDown, Eye, History, Play } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { modelOptions, type workflowSteps } from "@/lib/consts";
-import type { ModelKey, Task } from "@/lib/types";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+	modelOptionsClaude,
+	modelOptionsOpencode,
+	serviceOptions,
+	type workflowSteps,
+} from "@/lib/consts";
+import type { ModelKey, ServiceKey, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { trpc } from "../../../../trpc";
 
@@ -10,7 +25,7 @@ interface WorkflowStepButtonProps {
 	step: (typeof workflowSteps)[number];
 	hasContent: boolean;
 	task: Task;
-	onSelect: (model: ModelKey) => void;
+	onSelect: (service: ServiceKey, model: ModelKey) => void;
 	onViewEdit: () => void;
 	onContinueLastSession: (sessionId: string) => void;
 	onShowHistory: () => void;
@@ -26,7 +41,6 @@ export function WorkflowStepButton({
 	onShowHistory,
 }: WorkflowStepButtonProps) {
 	const [open, setOpen] = useState(false);
-	const ref = useRef<HTMLDivElement>(null);
 
 	const { data: sessions } = trpc.ai.sessions.listByScope.useQuery({
 		service: "claude",
@@ -37,137 +51,118 @@ export function WorkflowStepButton({
 		limit: 10,
 	});
 
-	useEffect(() => {
-		if (!open) return;
-
-		function handleClickOutside(e: MouseEvent) {
-			if (ref.current && !ref.current.contains(e.target as Node)) {
-				setOpen(false);
-			}
-		}
-
-		document.addEventListener("mousedown", handleClickOutside);
-		return () => document.removeEventListener("mousedown", handleClickOutside);
-	}, [open]);
-
 	const Icon = step.icon;
 	const sessionCount = sessions?.length ?? 0;
 	const hasSessions = sessionCount > 0;
 	const lastSession = sessions?.[0];
 
+	function handleSelect(service: ServiceKey, model: ModelKey) {
+		setOpen(false);
+		onSelect(service, model);
+	}
+
 	return (
-		<div ref={ref} className="relative">
-			<Badge
-				variant={hasContent ? step.variant : "default"}
-				onClick={() => setOpen((o) => !o)}
-				className="cursor-pointer gap-1 rounded-md py-1 px-2 hover:bg-white/10 active:bg-white/15"
+		<DropdownMenu open={open} onOpenChange={setOpen}>
+			<DropdownMenuTrigger asChild>
+				<Badge
+					variant={hasContent ? step.variant : "default"}
+					className="cursor-pointer gap-1 rounded-md py-1 px-2 hover:bg-white/10 active:bg-white/15"
+				>
+					<Icon className="h-3 w-3" />
+					{step.label}
+					<ChevronDown className="h-2.5 w-2.5 opacity-50" />
+				</Badge>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent
+				align="end"
+				side="bottom"
+				sideOffset={4}
+				className="w-[180px]"
+				onCloseAutoFocus={(e) => e.preventDefault()}
 			>
-				<Icon className="h-3 w-3" />
-				{step.label}
-				<ChevronDown
-					className={cn(
-						"h-2.5 w-2.5 opacity-50 transition-transform",
-						open && "rotate-180",
-					)}
-				/>
-			</Badge>
-
-			{open && (
-				<div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] rounded-md border border-white/10 bg-[#1a1a1a] py-1 shadow-xl">
-					{hasSessions && lastSession && (
-						<>
-							<DropdownButton
-								icon={<Play className="h-3 w-3" />}
-								label="Continue last session"
-								className="text-emerald-400 hover:text-emerald-300"
-								onClick={() => {
-									setOpen(false);
-									onContinueLastSession(lastSession.id);
-								}}
-							/>
-							<DropdownButton
-								icon={<History className="h-3 w-3" />}
-								label="View all sessions"
-								onClick={() => {
-									setOpen(false);
-									onShowHistory();
-								}}
-							/>
-							<DropdownButton
-								icon={<Eye className="h-3 w-3" />}
-								label="View"
-								onClick={() => {
-									setOpen(false);
-									onViewEdit();
-								}}
-							/>
-							<div className="my-1 h-px bg-white/10" />
-							<div className="px-3 py-1 text-[10px] text-white/40">
-								New session with:
-							</div>
-						</>
-					)}
-
-					{!hasSessions && (
-						<>
-							<DropdownButton
-								icon={<Eye className="h-3 w-3" />}
-								label="View"
-								onClick={() => {
-									setOpen(false);
-									onViewEdit();
-								}}
-							/>
-							<div className="my-1 h-px bg-white/10" />
-						</>
-					)}
-
-					{modelOptions.map((model) => (
-						<button
-							key={model.key}
-							type="button"
+				{hasSessions && lastSession && (
+					<>
+						<DropdownMenuItem
+							className="gap-2 text-xs text-emerald-400 focus:text-emerald-300"
 							onClick={() => {
 								setOpen(false);
-								onSelect(model.key);
+								onContinueLastSession(lastSession.id);
 							}}
-							className="flex w-full items-center gap-2 px-3 py-1.5 text-[11px] text-white/70 hover:bg-white/10 hover:text-white/90 transition-colors"
 						>
+							<Play className="h-3 w-3" />
+							Continue last session
+						</DropdownMenuItem>
+						<DropdownMenuItem
+							className="gap-2 text-xs"
+							onClick={() => {
+								setOpen(false);
+								onShowHistory();
+							}}
+						>
+							<History className="h-3 w-3" />
+							View all sessions
+						</DropdownMenuItem>
+						<DropdownMenuItem
+							className="gap-2 text-xs"
+							onClick={() => {
+								setOpen(false);
+								onViewEdit();
+							}}
+						>
+							<Eye className="h-3 w-3" />
+							View
+						</DropdownMenuItem>
+						<DropdownMenuSeparator />
+						<div className="px-2 py-1 text-[10px] text-white/40">
+							New session with:
+						</div>
+					</>
+				)}
+
+				{!hasSessions && (
+					<>
+						<DropdownMenuItem
+							className="gap-2 text-xs"
+							onClick={() => {
+								setOpen(false);
+								onViewEdit();
+							}}
+						>
+							<Eye className="h-3 w-3" />
+							View
+						</DropdownMenuItem>
+						<DropdownMenuSeparator />
+					</>
+				)}
+
+				{serviceOptions.map((service) => (
+					<DropdownMenuSub key={service.key}>
+						<DropdownMenuSubTrigger className="gap-2 text-xs text-white/70">
 							<span
-								className={cn("w-1.5 h-1.5 rounded-full", model.dotColor)}
+								className={cn("h-1.5 w-1.5 rounded-full", service.dotColor)}
 							/>
-							{model.label}
-						</button>
-					))}
-				</div>
-			)}
-		</div>
-	);
-}
-
-interface DropdownButtonProps {
-	icon: React.ReactNode;
-	label: string;
-	onClick: () => void;
-	className?: string;
-}
-
-function DropdownButton({
-	icon,
-	label,
-	onClick,
-	className,
-}: DropdownButtonProps) {
-	return (
-		<button
-			type="button"
-			onClick={onClick}
-			className={cn(
-				"flex w-full items-center gap-2 px-3 py-1.5 text-[11px] text-white/70 hover:bg-white/10 hover:text-white/90 transition-colors",
-				className,
-			)}
-		>
-			{icon}
-			{label}
-		</button>
+							{service.label}
+						</DropdownMenuSubTrigger>
+						<DropdownMenuSubContent className="w-[160px]">
+							{(service.key === "claude"
+								? modelOptionsClaude
+								: modelOptionsOpencode
+							).map((model) => (
+								<DropdownMenuItem
+									key={model.key}
+									className="gap-2 text-xs text-white/70 focus:text-white/90"
+									onClick={() => handleSelect(service.key, model.key)}
+								>
+									<span
+										className={cn("h-1.5 w-1.5 rounded-full", model.dotColor)}
+									/>
+									{model.label}
+								</DropdownMenuItem>
+							))}
+						</DropdownMenuSubContent>
+					</DropdownMenuSub>
+				))}
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 }

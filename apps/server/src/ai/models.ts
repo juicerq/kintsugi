@@ -29,6 +29,10 @@ export const modelsMap = {
 		claude: null,
 		opencode: "kimi-for-coding/k2p5",
 	},
+	"kimi-k2.5-free": {
+		claude: null,
+		opencode: "opencode/kimi-k2.5-free",
+	},
 } as const satisfies Record<string, Record<AiServiceName, string | null>>;
 
 export type ModelKey = keyof typeof modelsMap;

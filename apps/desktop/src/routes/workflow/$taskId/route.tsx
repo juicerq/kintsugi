@@ -1,24 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { modelOptions, workflowSteps } from "@/lib/consts";
-import type { ModelKey, WorkflowStep } from "@/lib/types";
+import { modelOptions, serviceOptions, workflowSteps } from "@/lib/consts";
 import { trpc } from "../../../trpc";
 import { WorkflowSession } from "./-components/workflow-session";
 
-const workflowStepKeys = workflowSteps.map((step) => step.key) as [
-	WorkflowStep,
-	...WorkflowStep[],
-];
-const modelKeys = modelOptions.map((model) => model.key) as [
-	ModelKey,
-	...ModelKey[],
-];
+const workflowStepKeys = workflowSteps.map((step) => step.key);
+
+const modelKeys = modelOptions.map((model) => model.key);
+
+const serviceKeys = serviceOptions.map((service) => service.key);
+
 const defaultWorkflowStep = workflowStepKeys[0];
 const defaultModelKey = modelKeys[0];
+const defaultServiceKey = serviceKeys[0];
 
 export const Route = createFileRoute("/workflow/$taskId")({
 	validateSearch: z.object({
 		step: z.enum(workflowStepKeys).default(defaultWorkflowStep),
+		service: z.enum(serviceKeys).default(defaultServiceKey),
 		model: z.enum(modelKeys).default(defaultModelKey),
 		sessionId: z.string().optional(),
 	}),
@@ -27,7 +26,7 @@ export const Route = createFileRoute("/workflow/$taskId")({
 
 function WorkflowPage() {
 	const { taskId } = Route.useParams();
-	const { step, model, sessionId: routeSessionId } = Route.useSearch();
+	const { step, service, model, sessionId: routeSessionId } = Route.useSearch();
 
 	const [task] = trpc.tasks.get.useSuspenseQuery({ id: taskId });
 	const [projects] = trpc.projects.list.useSuspenseQuery();
@@ -42,6 +41,7 @@ function WorkflowPage() {
 			taskId={taskId}
 			taskTitle={task.title}
 			step={step}
+			service={service}
 			model={model}
 			task={task}
 			project={project}

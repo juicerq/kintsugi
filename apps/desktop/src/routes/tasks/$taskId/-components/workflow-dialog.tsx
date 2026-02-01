@@ -64,18 +64,18 @@ export function WorkflowDialog({
 
 					{/* Tabs */}
 					<div className="flex gap-1 mt-2">
-					{workflowSteps.map((step) => (
-						<button
-							key={step.key}
-							type="button"
-							onClick={() => onTabChange(step.key)}
-							className={cn(
-								"flex items-center gap-2 px-3 py-1.5 rounded-md text-[12px] transition-colors",
-								activeTab === step.key
-									? "bg-white/10 text-white"
-									: "text-white/50 hover:text-white/70 hover:bg-white/[0.04]",
-							)}
-						>
+						{workflowSteps.map((step) => (
+							<button
+								key={step.key}
+								type="button"
+								onClick={() => onTabChange(step.key)}
+								className={cn(
+									"flex items-center gap-2 px-3 py-1.5 rounded-md text-[12px] transition-colors",
+									activeTab === step.key
+										? "bg-white/10 text-white"
+										: "text-white/50 hover:text-white/70 hover:bg-white/[0.04]",
+								)}
+							>
 								<step.icon className="w-3 h-3" />
 								{step.label}
 							</button>

@@ -1,5 +1,11 @@
 import { createContext, type ReactNode, useContext, useState } from "react";
-import type { ModelKey, Project, Task, WorkflowStep } from "@/lib/types";
+import type {
+	ModelKey,
+	Project,
+	ServiceKey,
+	Task,
+	WorkflowStep,
+} from "@/lib/types";
 import { useWorkflowSession } from "../-hooks/use-workflow-session";
 import { ChatInput } from "./chat-input";
 import { MessageList } from "./message-list";
@@ -11,6 +17,7 @@ import { WorkflowHeader } from "./workflow-header";
 interface WorkflowSessionContextValue {
 	taskId: string;
 	taskTitle: string;
+	service: ServiceKey;
 	model: ModelKey;
 	step: WorkflowStep;
 	session: ReturnType<typeof useWorkflowSession>;
@@ -31,6 +38,7 @@ interface WorkflowSessionRootProps {
 	taskId: string;
 	taskTitle: string;
 	step: WorkflowStep;
+	service: ServiceKey;
 	model: ModelKey;
 	task: Task | undefined;
 	project: Project | undefined;
@@ -42,6 +50,7 @@ function WorkflowSessionRoot({
 	taskId,
 	taskTitle,
 	step,
+	service,
 	model,
 	task,
 	project,
@@ -52,6 +61,7 @@ function WorkflowSessionRoot({
 		task,
 		project,
 		step,
+		service,
 		model,
 		routeSessionId,
 	});
@@ -59,6 +69,7 @@ function WorkflowSessionRoot({
 	const value = {
 		taskId,
 		taskTitle,
+		service,
 		model,
 		step,
 		session,

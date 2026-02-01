@@ -1,5 +1,11 @@
 import { useCallback } from "react";
-import type { ModelKey, Project, Task, WorkflowStep } from "@/lib/types";
+import type {
+	ModelKey,
+	Project,
+	ServiceKey,
+	Task,
+	WorkflowStep,
+} from "@/lib/types";
 import { buildInitialPrompt } from "../-components/build-prompt";
 import type { SessionApi } from "./use-session-api";
 import type { SessionMessages } from "./use-session-messages";
@@ -14,6 +20,7 @@ interface UseSessionActionsOptions {
 	task: Task | undefined;
 	project: Project | undefined;
 	step: WorkflowStep;
+	service: ServiceKey;
 	model: ModelKey;
 	sessionId: string | null;
 	setSessionId: (id: string | null) => void;
@@ -37,6 +44,7 @@ export function useSessionActions({
 	task,
 	project,
 	step,
+	service,
 	model,
 	sessionId,
 	setSessionId,
@@ -81,6 +89,7 @@ export function useSessionActions({
 
 		try {
 			const session = await createSession({
+				service,
 				modelKey: model,
 				title: `${step}: ${task.title}`,
 				scope: { projectId: task.project_id, label: `${step}:${task.id}` },
@@ -91,7 +100,7 @@ export function useSessionActions({
 			const prompt = buildInitialPrompt(step, task, project);
 			appendUserMessage(prompt);
 
-			const response = await sendSessionMessage(session.id, prompt);
+			const response = await sendSessionMessage(session.id, prompt, service);
 			appendAssistantMessage(response.id, response.content);
 		} catch (err) {
 			appendError(getErrorMessage(err, "Failed to create session"));
@@ -107,6 +116,7 @@ export function useSessionActions({
 		model,
 		project,
 		sendSessionMessage,
+		service,
 		setLoading,
 		setSessionId,
 		startThinking,
@@ -120,10 +130,13 @@ export function useSessionActions({
 
 		setLoading(true);
 		try {
-			const sessions = await fetchSessionsByScope({
-				projectId: task.project_id,
-				label: `${step}:${task.id}`,
-			});
+			const sessions = await fetchSessionsByScope(
+				{
+					projectId: task.project_id,
+					label: `${step}:${task.id}`,
+				},
+				service,
+			);
 
 			if (sessions.length === 0) {
 				await startNewSession();
@@ -146,6 +159,7 @@ export function useSessionActions({
 		startNewSession,
 		step,
 		task,
+		service,
 	]);
 
 	const loadSession = useCallback(
@@ -156,7 +170,7 @@ export function useSessionActions({
 			markResumed();
 
 			try {
-				const session = await fetchSession(targetSessionId);
+				const session = await fetchSession(targetSessionId, service);
 
 				if (
 					session?.stopRequested ||
@@ -166,7 +180,7 @@ export function useSessionActions({
 					markStopped();
 				}
 
-				const msgs = await fetchMessages(targetSessionId);
+				const msgs = await fetchMessages(targetSessionId, service);
 				setMessagesFromDb(msgs);
 			} catch (err) {
 				appendError(getErrorMessage(err, "Failed to load session"));
@@ -184,6 +198,7 @@ export function useSessionActions({
 			setLoading,
 			setMessagesFromDb,
 			setSessionId,
+			service,
 		],
 	);
 
@@ -194,14 +209,14 @@ export function useSessionActions({
 		startThinking();
 
 		try {
-			const response = await sendSessionMessage(sessionId, content);
+			const response = await sendSessionMessage(sessionId, content, service);
 			appendAssistantMessage(response.id, response.content);
 		} catch (err) {
 			const errorMsg = getErrorMessage(err, "Failed to send message");
 
 			if (errorMsg.includes("stopped") || errorMsg.includes("paused")) {
 				try {
-					const session = await fetchSession(sessionId);
+					const session = await fetchSession(sessionId, service);
 					if (
 						session?.stopRequested ||
 						session?.status === "stopped" ||
@@ -224,7 +239,7 @@ export function useSessionActions({
 		if (!sessionId) return;
 
 		try {
-			await stopSessionApi(sessionId);
+			await stopSessionApi(sessionId, service);
 			markStopped();
 		} catch (err) {
 			appendError(getErrorMessage(err, "Failed to stop session"));
@@ -235,7 +250,7 @@ export function useSessionActions({
 		if (!sessionId) return;
 
 		try {
-			await resumeSessionApi(sessionId);
+			await resumeSessionApi(sessionId, service);
 			markResumed();
 		} catch (err) {
 			appendError(getErrorMessage(err, "Failed to resume session"));
@@ -246,10 +261,13 @@ export function useSessionActions({
 		if (!task) return;
 
 		try {
-			const sessions = await fetchSessionsByScope({
-				projectId: task.project_id,
-				label: `${step}:${task.id}`,
-			});
+			const sessions = await fetchSessionsByScope(
+				{
+					projectId: task.project_id,
+					label: `${step}:${task.id}`,
+				},
+				service,
+			);
 			setExistingSessions(sessions);
 		} catch {
 			// Use whatever we already have

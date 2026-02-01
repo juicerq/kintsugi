@@ -6,7 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Text } from "@/components/ui/text";
 import { Title } from "@/components/ui/title";
 import { workflowSteps } from "@/lib/consts";
-import type { ModelKey, SessionSummary, Task, WorkflowStep } from "@/lib/types";
+import type {
+	ModelKey,
+	ServiceKey,
+	SessionSummary,
+	Task,
+	WorkflowStep,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { trpc } from "../../../../trpc";
 import { SessionHistory } from "../../../workflow/$taskId/-components/session-history";
@@ -46,11 +52,15 @@ export function TaskHeader({
 		toggleComplete.mutate({ id: task.id });
 	}
 
-	function handleWorkflowStep(step: WorkflowStep, model: ModelKey) {
+	function handleWorkflowStep(
+		step: WorkflowStep,
+		service: ServiceKey,
+		model: ModelKey,
+	) {
 		navigate({
 			to: "/workflow/$taskId",
 			params: { taskId: task.id },
-			search: { step, model, sessionId: undefined },
+			search: { step, service, model, sessionId: undefined },
 		});
 	}
 
@@ -138,7 +148,9 @@ export function TaskHeader({
 							step={step}
 							hasContent={task[step.key] !== null}
 							task={task}
-							onSelect={(model) => handleWorkflowStep(step.key, model)}
+							onSelect={(service, model) =>
+								handleWorkflowStep(step.key, service, model)
+							}
 							onViewEdit={() => handleViewEdit(step.key)}
 							onContinueLastSession={(sessionId) =>
 								handleContinueSession(step.key, sessionId)

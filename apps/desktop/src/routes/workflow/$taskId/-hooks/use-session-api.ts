@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import type { ModelKey, SessionSummary } from "@/lib/types";
+import type { ModelKey, ServiceKey, SessionSummary } from "@/lib/types";
 import { trpc } from "../../../../trpc";
 
 export function useSessionApi() {
@@ -11,22 +11,20 @@ export function useSessionApi() {
 
 	const createSession = useCallback(
 		async (opts: {
+			service: ServiceKey;
 			modelKey: ModelKey;
 			title: string;
 			scope: { projectId: string; label: string };
 		}) => {
-			return createMutation.mutateAsync({
-				service: "claude",
-				...opts,
-			});
+			return createMutation.mutateAsync(opts);
 		},
 		[createMutation],
 	);
 
 	const sendMessage = useCallback(
-		async (sessionId: string, content: string) => {
+		async (sessionId: string, content: string, service: ServiceKey) => {
 			return sendMutation.mutateAsync({
-				service: "claude",
+				service,
 				sessionId,
 				content,
 			});
@@ -35,9 +33,9 @@ export function useSessionApi() {
 	);
 
 	const stopSession = useCallback(
-		async (sessionId: string) => {
+		async (sessionId: string, service: ServiceKey) => {
 			await stopMutation.mutateAsync({
-				service: "claude",
+				service,
 				sessionId,
 			});
 		},
@@ -45,9 +43,9 @@ export function useSessionApi() {
 	);
 
 	const resumeSession = useCallback(
-		async (sessionId: string) => {
+		async (sessionId: string, service: ServiceKey) => {
 			await resumeMutation.mutateAsync({
-				service: "claude",
+				service,
 				sessionId,
 			});
 		},
@@ -55,9 +53,9 @@ export function useSessionApi() {
 	);
 
 	const fetchSession = useCallback(
-		async (sessionId: string) => {
+		async (sessionId: string, service: ServiceKey) => {
 			return utils.ai.sessions.get.fetch({
-				service: "claude",
+				service,
 				sessionId,
 			});
 		},
@@ -65,9 +63,9 @@ export function useSessionApi() {
 	);
 
 	const fetchMessages = useCallback(
-		async (sessionId: string) => {
+		async (sessionId: string, service: ServiceKey) => {
 			const msgs = await utils.ai.messages.list.fetch({
-				service: "claude",
+				service,
 				sessionId,
 			});
 			return msgs ?? [];
@@ -76,9 +74,13 @@ export function useSessionApi() {
 	);
 
 	const fetchSessionsByScope = useCallback(
-		async (scope: { projectId: string; label: string }, limit = 10) => {
+		async (
+			scope: { projectId: string; label: string },
+			service: ServiceKey,
+			limit = 10,
+		) => {
 			const sessions = await utils.ai.sessions.listByScope.fetch({
-				service: "claude",
+				service,
 				scope,
 				limit,
 			});

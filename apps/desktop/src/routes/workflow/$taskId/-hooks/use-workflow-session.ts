@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type {
 	ModelKey,
 	Project,
+	ServiceKey,
 	SessionSummary,
 	Task,
 	WorkflowStep,
@@ -28,6 +29,7 @@ interface UseWorkflowSessionOptions {
 	task: Task | undefined;
 	project: Project | undefined;
 	step: WorkflowStep;
+	service: ServiceKey;
 	model: ModelKey;
 	routeSessionId?: string;
 }
@@ -79,6 +81,7 @@ export function useWorkflowSession({
 	task,
 	project,
 	step,
+	service,
 	model,
 	routeSessionId,
 }: UseWorkflowSessionOptions): UseWorkflowSessionReturn {
@@ -102,6 +105,7 @@ export function useWorkflowSession({
 		task,
 		project,
 		step,
+		service,
 		model,
 		sessionId,
 		setSessionId,
@@ -123,7 +127,7 @@ export function useWorkflowSession({
 		onNewMessage: () => {
 			if (!sessionId) return;
 			api
-				.fetchMessages(sessionId)
+				.fetchMessages(sessionId, service)
 				.then((msgs) => {
 					messageState.setMessagesFromDb(msgs);
 					streaming.clearAll();
@@ -152,10 +156,10 @@ export function useWorkflowSession({
 
 	const scopeKey = useMemo(() => {
 		if (!task) return null;
-		const base = `${task.id}:${task.project_id}:${step}`;
+		const base = `${task.id}:${task.project_id}:${step}:${service}`;
 		if (routeSessionId) return `${base}:session:${routeSessionId}`;
 		return `${base}:model:${model}`;
-	}, [task?.id, task?.project_id, step, model, routeSessionId]);
+	}, [task, step, service, model, routeSessionId]);
 
 	useEffect(() => {
 		if (!task || !project || !scopeKey) return;

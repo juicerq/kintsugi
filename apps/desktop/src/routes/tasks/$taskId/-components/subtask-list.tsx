@@ -3,7 +3,6 @@ import { Text } from "@/components/ui/text";
 import type { ModelKey, ServiceKey } from "@/lib/types";
 import { trpc } from "../../../../trpc";
 import { RunAllButton } from "./run-all-button";
-import { ServiceSelector } from "./service-selector";
 import { SubtaskCreateInput } from "./subtask-create-input";
 import { SubtaskItem } from "./subtask-item";
 import type { Subtask } from "./types";
@@ -15,7 +14,6 @@ interface SubtaskListProps {
 
 export function SubtaskList({ taskId, subtasks }: SubtaskListProps) {
 	const [expandedId, setExpandedId] = useState<string | null>(null);
-	const [service, setService] = useState<ServiceKey>("claude");
 
 	const { data: executionStatus } = trpc.execution.getStatus.useQuery(
 		{ taskId },
@@ -33,11 +31,15 @@ export function SubtaskList({ taskId, subtasks }: SubtaskListProps) {
 		setExpandedId((prev) => (prev === id ? null : id));
 	}
 
-	function handleRunAll(modelKey: ModelKey) {
+	function handleRunAll(service: ServiceKey, modelKey: ModelKey) {
 		runAll.mutate({ taskId, modelKey, service });
 	}
 
-	function handleRunSingle(subtaskId: string, modelKey: ModelKey) {
+	function handleRunSingle(
+		subtaskId: string,
+		service: ServiceKey,
+		modelKey: ModelKey,
+	) {
 		runSingle.mutate({ taskId, subtaskId, modelKey, service });
 	}
 
@@ -53,7 +55,6 @@ export function SubtaskList({ taskId, subtasks }: SubtaskListProps) {
 				</Text>
 				{subtasks.length > 0 && (
 					<div className="flex items-center gap-2">
-						<ServiceSelector value={service} onChange={setService} />
 						<RunAllButton
 							isExecuting={isExecuting}
 							onRun={handleRunAll}
@@ -72,7 +73,9 @@ export function SubtaskList({ taskId, subtasks }: SubtaskListProps) {
 							isExpanded={expandedId === subtask.id}
 							isRunning={currentSubtaskId === subtask.id}
 							onToggle={() => handleToggle(subtask.id)}
-							onRun={() => handleRunSingle(subtask.id, "sonnet-4.5")}
+							onRun={(service, modelKey) =>
+								handleRunSingle(subtask.id, service, modelKey)
+							}
 						/>
 					))}
 				</div>

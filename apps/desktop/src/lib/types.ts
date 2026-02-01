@@ -8,7 +8,8 @@ export type ModelKey =
 	| "opus-4.5"
 	| "sonnet-4.5"
 	| "haiku-4.5"
-	| "gpt-5.2-codex";
+	| "gpt-5.2-codex"
+	| "kimi-k2.5-free";
 
 /** Single task (from tasks.get) */
 export type Task = NonNullable<RouterOutputs["tasks"]["get"]>;
