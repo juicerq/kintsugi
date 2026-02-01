@@ -152,7 +152,8 @@ export function TaskHeader({
 			<WorkflowDialog
 				open={dialogOpen}
 				onOpenChange={setDialogOpen}
-				initialTab={dialogTab}
+				activeTab={dialogTab}
+				onTabChange={setDialogTab}
 				task={task}
 			/>
 

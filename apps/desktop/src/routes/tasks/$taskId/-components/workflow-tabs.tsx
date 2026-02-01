@@ -29,7 +29,7 @@ export function WorkflowTabs({ task }: WorkflowTabsProps) {
 					</button>
 				))}
 			</div>
-			<WorkflowEditor task={task} activeTab={activeTab} />
+			<WorkflowEditor key={`${task.id}-${activeTab}`} task={task} activeTab={activeTab} />
 		</div>
 	);
 }

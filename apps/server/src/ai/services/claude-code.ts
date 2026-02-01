@@ -12,6 +12,11 @@ import { uiEventBus } from "../../events/bus";
 import { logger, truncate } from "../../lib/logger";
 import { withErrorLog } from "../../lib/safe";
 import { BaseAiClient, SessionControlError } from "../core";
+import {
+	createThinkingState,
+	createToolsState,
+	processStreamMessage,
+} from "../stream-processor";
 import type {
 	AiMessage,
 	AiRole,
@@ -46,6 +51,8 @@ type QueryOptions = {
 	permissionMode?: SdkPermissionMode;
 	pathToClaudeCodeExecutable?: string;
 	resume?: string;
+	includePartialMessages?: boolean;
+	maxThinkingTokens?: number;
 };
 
 type QueryFunction = (input: {
@@ -104,6 +111,7 @@ export class ClaudeCodeClient extends BaseAiClient {
 				const opts: QueryOptions = {
 					model,
 					cwd: repoPath,
+					maxThinkingTokens: 30000,
 					...(allowedTools && { allowedTools }),
 					...(permissionMode && { permissionMode }),
 					...(pathToClaudeCodeExecutable && { pathToClaudeCodeExecutable }),
@@ -249,6 +257,8 @@ export class ClaudeCodeClient extends BaseAiClient {
 			model,
 			cwd: repoPath,
 			resume: input.sessionId,
+			includePartialMessages: true,
+			maxThinkingTokens: 30000,
 			...(allowedTools && { allowedTools }),
 			...(permissionMode && { permissionMode }),
 			...(pathToClaudeCodeExecutable && { pathToClaudeCodeExecutable }),
@@ -262,8 +272,17 @@ export class ClaudeCodeClient extends BaseAiClient {
 				const assistantChunks: string[] = [];
 				const assistantRaw: ClaudeCodeSdkMessage[] = [];
 				let assistantRole: AiRole = "assistant";
+				const thinkingState = createThinkingState();
+				const toolsState = createToolsState();
 
 				for await (const message of stream) {
+					// DEBUG: Log all message types from SDK
+					sessionLog.info("SDK stream message", {
+						type: message.type,
+						hasEvent: "event" in message,
+						hasMessage: "message" in message,
+					});
+
 					await this.refreshHeartbeat(sessionId);
 
 					const controlReason = await this.checkControl(sessionId);
@@ -276,6 +295,15 @@ export class ClaudeCodeClient extends BaseAiClient {
 
 						throw new SessionControlError(controlReason);
 					}
+
+					// Process streaming events (thinking, tool progress) for UI
+					processStreamMessage(
+						message,
+						sessionId,
+						(event) => uiEventBus.publish(event),
+						thinkingState,
+						toolsState,
+					);
 
 					if (message.type !== "assistant" || !message.message) {
 						continue;

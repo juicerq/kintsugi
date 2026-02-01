@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Task, WorkflowStep } from "@/lib/types";
 import { trpc } from "../../../../trpc";
 
@@ -8,7 +8,7 @@ interface WorkflowEditorProps {
 }
 
 export function WorkflowEditor({ task, activeTab }: WorkflowEditorProps) {
-	const [content, setContent] = useState(task[activeTab] ?? "");
+	const [content, setContent] = useState(() => task[activeTab] ?? "");
 	const [isSaving, setIsSaving] = useState(false);
 
 	const utils = trpc.useUtils();
@@ -21,18 +21,15 @@ export function WorkflowEditor({ task, activeTab }: WorkflowEditorProps) {
 		},
 	});
 
-	useEffect(() => {
-		setContent(task[activeTab] ?? "");
-	}, [activeTab, task]);
-
-	const debouncedSave = useCallback(
-		debounce((value: string) => {
-			updateTask.mutate({
-				id: task.id,
-				[activeTab]: value || null,
-			});
-		}, 500),
-		[],
+	const debouncedSave = useMemo(
+		() =>
+			debounce((value: string) => {
+				updateTask.mutate({
+					id: task.id,
+					[activeTab]: value || null,
+				});
+			}, 500),
+		[updateTask, task.id, activeTab],
 	);
 
 	function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {

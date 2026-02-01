@@ -11,10 +11,7 @@ interface ResultsSectionProps {
 
 const FILES_COLLAPSE_THRESHOLD = 10;
 
-export function ResultsSection({
-	keyDecisions,
-	files,
-}: ResultsSectionProps) {
+export function ResultsSection({ keyDecisions, files }: ResultsSectionProps) {
 	const hasDecisions = keyDecisions.length > 0;
 	const hasFiles = files.length > 0;
 

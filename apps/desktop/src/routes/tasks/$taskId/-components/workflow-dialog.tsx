@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -13,26 +13,18 @@ import { trpc } from "../../../../trpc";
 interface WorkflowDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	initialTab?: WorkflowStep;
+	activeTab: WorkflowStep;
+	onTabChange: (tab: WorkflowStep) => void;
 	task: Task;
 }
 
 export function WorkflowDialog({
 	open,
 	onOpenChange,
-	initialTab,
+	activeTab,
+	onTabChange,
 	task,
 }: WorkflowDialogProps) {
-	const [activeTab, setActiveTab] = useState<WorkflowStep>(
-		initialTab ?? "brainstorm",
-	);
-
-	useEffect(() => {
-		if (open && initialTab) {
-			setActiveTab(initialTab);
-		}
-	}, [open, initialTab]);
-	const [content, setContent] = useState(task[activeTab] ?? "");
 	const [isSaving, setIsSaving] = useState(false);
 
 	const utils = trpc.useUtils();
@@ -45,25 +37,17 @@ export function WorkflowDialog({
 		},
 	});
 
-	useEffect(() => {
-		setContent(task[activeTab] ?? "");
-	}, [activeTab, task]);
-
-	const debouncedSave = useCallback(
-		debounce((value: string) => {
+	const handleSave = useCallback(
+		(value: string) => {
 			updateTask.mutate({
 				id: task.id,
 				[activeTab]: value || null,
 			});
-		}, 500),
-		[],
+		},
+		[updateTask, task.id, activeTab],
 	);
 
-	function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-		const value = e.target.value;
-		setContent(value);
-		debouncedSave(value);
-	}
+	const editorKey = `${task.id}-${activeTab}`;
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -80,18 +64,18 @@ export function WorkflowDialog({
 
 					{/* Tabs */}
 					<div className="flex gap-1 mt-2">
-						{workflowSteps.map((step) => (
-							<button
-								key={step.key}
-								type="button"
-								onClick={() => setActiveTab(step.key)}
-								className={cn(
-									"flex items-center gap-2 px-3 py-1.5 rounded-md text-[12px] transition-colors",
-									activeTab === step.key
-										? "bg-white/10 text-white"
-										: "text-white/50 hover:text-white/70 hover:bg-white/[0.04]",
-								)}
-							>
+					{workflowSteps.map((step) => (
+						<button
+							key={step.key}
+							type="button"
+							onClick={() => onTabChange(step.key)}
+							className={cn(
+								"flex items-center gap-2 px-3 py-1.5 rounded-md text-[12px] transition-colors",
+								activeTab === step.key
+									? "bg-white/10 text-white"
+									: "text-white/50 hover:text-white/70 hover:bg-white/[0.04]",
+							)}
+						>
 								<step.icon className="w-3 h-3" />
 								{step.label}
 							</button>
@@ -101,15 +85,52 @@ export function WorkflowDialog({
 
 				{/* Editor */}
 				<div className="p-4">
-					<textarea
-						value={content}
-						onChange={handleChange}
-						placeholder={`Write your ${activeTab} notes here...`}
-						className="w-full h-[280px] bg-white/[0.02] border border-white/10 rounded-md px-3 py-2 text-[13px] text-white/80 placeholder:text-white/30 focus:outline-none focus:border-white/20 resize-none"
+					<WorkflowDialogEditor
+						key={editorKey}
+						activeTab={activeTab}
+						initialValue={task[activeTab] ?? ""}
+						onSave={handleSave}
 					/>
 				</div>
 			</DialogContent>
 		</Dialog>
+	);
+}
+
+interface WorkflowDialogEditorProps {
+	activeTab: WorkflowStep;
+	initialValue: string;
+	onSave: (value: string) => void;
+}
+
+function WorkflowDialogEditor({
+	activeTab,
+	initialValue,
+	onSave,
+}: WorkflowDialogEditorProps) {
+	const [content, setContent] = useState(() => initialValue);
+
+	const debouncedSave = useMemo(
+		() =>
+			debounce((value: string) => {
+				onSave(value);
+			}, 500),
+		[onSave],
+	);
+
+	function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+		const value = e.target.value;
+		setContent(value);
+		debouncedSave(value);
+	}
+
+	return (
+		<textarea
+			value={content}
+			onChange={handleChange}
+			placeholder={`Write your ${activeTab} notes here...`}
+			className="w-full h-[280px] bg-white/[0.02] border border-white/10 rounded-md px-3 py-2 text-[13px] text-white/80 placeholder:text-white/30 focus:outline-none focus:border-white/20 resize-none"
+		/>
 	);
 }
 

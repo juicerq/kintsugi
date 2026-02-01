@@ -106,6 +106,10 @@ function createHandlers(queryClient: QueryClient): EventHandlerMap {
 				queryKey: [["ai", "sessions", "listByScope"]],
 			});
 		},
+		// Streaming events - handled by useSessionEvents, no cache invalidation needed
+		"session.thinking": () => {},
+		"session.toolProgress": () => {},
+		"session.partialMessage": () => {},
 	};
 }
 

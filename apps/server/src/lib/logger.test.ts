@@ -106,6 +106,10 @@ describe("truncate", () => {
 		expect(truncate("short", 100)).toBe("short");
 	});
 
+	test("handles undefined input", () => {
+		expect(truncate(undefined)).toBe("");
+	});
+
 	test("truncates long strings with indicator", () => {
 		const long = "a".repeat(2000);
 		const result = truncate(long, 100);

@@ -25,7 +25,11 @@ function sanitize(str: string): string {
 	return result;
 }
 
-function truncate(str: string, max = MAX_CONTENT_LENGTH): string {
+function truncate(
+	value: string | null | undefined,
+	max = MAX_CONTENT_LENGTH,
+): string {
+	const str = value ?? "";
 	if (str.length <= max) return str;
 	return `${str.slice(0, max)}...[truncated ${str.length - max} chars]`;
 }

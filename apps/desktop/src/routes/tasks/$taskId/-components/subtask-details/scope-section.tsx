@@ -113,7 +113,9 @@ export function ScopeSection({
 									key={criteria}
 									className="flex items-start gap-2 text-[12px] text-white/60"
 								>
-									<span className="text-white/30 tabular-nums">{index + 1}.</span>
+									<span className="text-white/30 tabular-nums">
+										{index + 1}.
+									</span>
 									<span>{criteria}</span>
 								</li>
 							))}

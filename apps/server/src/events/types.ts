@@ -39,4 +39,23 @@ export type UiInvalidateEvent =
 			type: "session.stopped";
 			sessionId: string;
 			reason: "user" | "error" | "system";
+	  }
+	| {
+			type: "session.thinking";
+			sessionId: string;
+			content: string;
+			isActive: boolean;
+	  }
+	| {
+			type: "session.toolProgress";
+			sessionId: string;
+			toolName: string;
+			toolUseId: string;
+			elapsedSeconds: number;
+			isActive: boolean;
+	  }
+	| {
+			type: "session.partialMessage";
+			sessionId: string;
+			content: string;
 	  };

@@ -65,6 +65,109 @@ Usar `<Title>`, `<Text>`, `<Badge>` - nunca `<h1>`, `<p>` com classes manuais.
 - Preferir `&&` sobre ternários: `{loading && <Spinner />}`
 - Preferir `mutate` com `onSuccess`/`onError` sobre `mutateAsync` com try/catch
 
+### Composição
+
+#### 3. Usar Composição ao invés de Props Booleanas
+
+Cada prop booleana dobra os estados possíveis do componente, criando complexidade exponencial.
+
+```typescript
+// Ruim: Complexidade exponencial
+function Composer({
+  isThread,
+  isDMThread,
+  isEditing,
+  isForwarding,
+}: Props) {
+  if (isDMThread) {
+    ...
+  } else if (isThread) {
+    ...
+  }
+  // Condicionais impossíveis de manter
+}
+
+// Bom: Variantes explícitas via composição
+function ChannelComposer() {
+  return (
+    <Composer.Frame>
+      <Composer.Header />
+      <Composer.Input />
+      <Composer.Footer>
+        <Composer.Attachments />
+        <Composer.Submit />
+      </Composer.Footer>
+    </Composer.Frame>
+  );
+}
+```
+
+#### 4. Compound Components com Context
+
+Estruture componentes complexos com contexto compartilhado, eliminando prop drilling.
+
+```typescript
+interface ComposerState {
+  input: string;
+  attachments: Attachment[];
+  isSubmitting: boolean;
+}
+
+interface ComposerActions {
+  update: (updater: (state: ComposerState) => ComposerState) => void;
+  submit: () => void;
+}
+
+const ComposerContext = createContext<{
+  state: ComposerState;
+  actions: ComposerActions;
+} | null>(null);
+
+function ComposerProvider({ children }: { children: React.ReactNode }) {
+  const [state, setState] = useState<ComposerState>(initialState);
+
+  const actions: ComposerActions = {
+    update: setState,
+    submit: () => {
+      /* ... */
+    },
+  };
+
+  return (
+    <ComposerContext.Provider value={{ state, actions }}>
+      {children}
+    </ComposerContext.Provider>
+  );
+}
+```
+
+Consumo: desestruture apenas o slice necessario do contexto. Evite acessar `session.x.y` direto quando so precisa de um sub-objeto.
+
+```ts
+const {
+  session: { chatInput },
+} = useWorkflowSessionContext();
+```
+
+### useEffect (escape hatch)
+
+Use `useEffect` apenas para sincronizar com sistemas externos (DOM, subscriptions, timers, network, third-party).
+
+Evite usos comuns (use render/eventos no lugar):
+
+- Estado derivado de props/state -> calcule no render ou use `useMemo`
+- Acoes de usuario (POST, navigate, log) -> event handlers
+- Reset de state por prop -> `key` ou estado derivado
+- Store externa -> `useSyncExternalStore`
+- Data fetching -> TanStack Query / tRPC hooks (se usar `useEffect`, sempre cleanup + race guard)
+
+Regras:
+
+- Dependencies devem incluir todos valores reativos; nunca desativar exhaustive-deps
+- Effect precisa ser idempotente e ter cleanup correto (Strict Mode roda setup+cleanup duas vezes)
+- Nao usar `useRef` para "rodar uma vez" ou burlar Strict Mode
+- Se precisar ler layout antes do paint, use `useLayoutEffect` (raro)
+
 ### Animações
 
 Usar `motion/react` (framer-motion). Movimentos sutis (4-12px), durações curtas (150-300ms), `easeOut` entrada, `easeIn` saída. Sempre `AnimatePresence` para condicional.
