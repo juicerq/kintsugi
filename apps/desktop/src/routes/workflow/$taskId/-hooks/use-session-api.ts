@@ -76,11 +76,11 @@ export function useSessionApi() {
 	const fetchSessionsByScope = useCallback(
 		async (
 			scope: { projectId: string; label: string },
-			service: ServiceKey,
+			service?: ServiceKey,
 			limit = 10,
 		) => {
 			const sessions = await utils.ai.sessions.listByScope.fetch({
-				service,
+				...(service && { service }),
 				scope,
 				limit,
 			});

@@ -130,13 +130,10 @@ export function useSessionActions({
 
 		setLoading(true);
 		try {
-			const sessions = await fetchSessionsByScope(
-				{
-					projectId: task.project_id,
-					label: `${step}:${task.id}`,
-				},
-				service,
-			);
+			const sessions = await fetchSessionsByScope({
+				projectId: task.project_id,
+				label: `${step}:${task.id}`,
+			});
 
 			if (sessions.length === 0) {
 				await startNewSession();
@@ -159,7 +156,6 @@ export function useSessionActions({
 		startNewSession,
 		step,
 		task,
-		service,
 	]);
 
 	const loadSession = useCallback(
@@ -170,17 +166,24 @@ export function useSessionActions({
 			markResumed();
 
 			try {
+				// Fetch session first to determine its actual service
 				const session = await fetchSession(targetSessionId, service);
 
+				if (!session) {
+					throw new Error("Session not found");
+				}
+
 				if (
-					session?.stopRequested ||
-					session?.status === "stopped" ||
-					session?.status === "paused"
+					session.stopRequested ||
+					session.status === "stopped" ||
+					session.status === "paused"
 				) {
 					markStopped();
 				}
 
-				const msgs = await fetchMessages(targetSessionId, service);
+				// Use the session's actual service to fetch messages
+				const sessionService = (session.service ?? service) as ServiceKey;
+				const msgs = await fetchMessages(targetSessionId, sessionService);
 				setMessagesFromDb(msgs);
 			} catch (err) {
 				appendError(getErrorMessage(err, "Failed to load session"));
@@ -261,13 +264,10 @@ export function useSessionActions({
 		if (!task) return;
 
 		try {
-			const sessions = await fetchSessionsByScope(
-				{
-					projectId: task.project_id,
-					label: `${step}:${task.id}`,
-				},
-				service,
-			);
+			const sessions = await fetchSessionsByScope({
+				projectId: task.project_id,
+				label: `${step}:${task.id}`,
+			});
 			setExistingSessions(sessions);
 		} catch {
 			// Use whatever we already have

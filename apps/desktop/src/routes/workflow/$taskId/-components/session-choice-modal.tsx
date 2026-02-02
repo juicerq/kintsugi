@@ -101,6 +101,10 @@ export function SessionChoiceModal({
 									{formatDate(session.created_at)}
 								</Text>
 
+								<span className="text-[9px] px-1.5 py-px rounded border shrink-0 ml-1 bg-sky-500/20 text-sky-400 border-sky-500/30">
+									{session.service}
+								</span>
+
 								<span
 									className={cn(
 										"text-[9px] px-1.5 py-px rounded border shrink-0 ml-1",

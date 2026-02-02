@@ -41,6 +41,25 @@ const modelKeysTuple = Object.keys(modelsMap) as [ModelKey, ...ModelKey[]];
 export const modelKeys = modelKeysTuple;
 export const modelKeySchema = z.enum(modelKeysTuple);
 
+export function resolveModelKey(params: {
+	modelId: string | null | undefined;
+	service: AiServiceName;
+}): ModelKey | null {
+	const { modelId, service } = params;
+
+	if (!modelId) return null;
+
+	const entries = Object.entries(modelsMap) as Array<
+		[ModelKey, Record<AiServiceName, string | null>]
+	>;
+
+	for (const [key, services] of entries) {
+		if (services[service] === modelId) return key;
+	}
+
+	return null;
+}
+
 export function getModelId(
 	modelKey: ModelKey,
 	service: AiServiceName,

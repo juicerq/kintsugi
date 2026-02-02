@@ -43,6 +43,7 @@ interface WorkflowSessionRootProps {
 	task: Task | undefined;
 	project: Project | undefined;
 	routeSessionId?: string;
+	startNew?: boolean;
 	children: ReactNode;
 }
 
@@ -55,6 +56,7 @@ function WorkflowSessionRoot({
 	task,
 	project,
 	routeSessionId,
+	startNew,
 	children,
 }: WorkflowSessionRootProps) {
 	const session = useWorkflowSession({
@@ -64,6 +66,7 @@ function WorkflowSessionRoot({
 		service,
 		model,
 		routeSessionId,
+		startNew,
 	});
 
 	const value = {
@@ -86,6 +89,7 @@ function WorkflowSessionHeader() {
 	const {
 		taskId,
 		taskTitle,
+		service,
 		model,
 		step,
 		session: { header },
@@ -95,6 +99,7 @@ function WorkflowSessionHeader() {
 		<WorkflowHeader
 			taskId={taskId}
 			taskTitle={taskTitle}
+			service={service}
 			model={model}
 			step={step}
 			hasSession={header.hasSession}

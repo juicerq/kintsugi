@@ -2,7 +2,13 @@ import { Clock, MessageSquare, Play, X } from "lucide-react";
 import { Text } from "@/components/ui/text";
 import { Title } from "@/components/ui/title";
 import { workflowSteps } from "@/lib/consts";
-import type { SessionSummary, WorkflowStep } from "@/lib/types";
+import { resolveModelKey } from "@/lib/model-keys";
+import type {
+	ModelKey,
+	ServiceKey,
+	SessionSummary,
+	WorkflowStep,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface SessionHistoryProps {
@@ -10,7 +16,11 @@ interface SessionHistoryProps {
 	onClose: () => void;
 	sessions: SessionSummary[];
 	step: WorkflowStep;
-	onSelectSession: (sessionId: string) => void;
+	onSelectSession: (
+		sessionId: string,
+		service: ServiceKey,
+		model: ModelKey,
+	) => void;
 }
 
 export function SessionHistory({
@@ -97,6 +107,10 @@ export function SessionHistory({
 									{formatDate(session.created_at)}
 								</Text>
 
+								<span className="text-[9px] px-1.5 py-px rounded border shrink-0 ml-1 bg-sky-500/20 text-sky-400 border-sky-500/30">
+									{session.service}
+								</span>
+
 								<span
 									className={cn(
 										"text-[9px] px-1.5 py-px rounded border shrink-0 ml-1",
@@ -116,7 +130,13 @@ export function SessionHistory({
 
 							<button
 								type="button"
-								onClick={() => onSelectSession(session.id)}
+								onClick={() =>
+									onSelectSession(
+										session.id,
+										session.service as ServiceKey,
+										resolveModelKey(session.model_key) ?? "opus-4.5",
+									)
+								}
 								className="flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-white/[0.06] hover:bg-white/[0.12] text-white/60 hover:text-white/80 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
 							>
 								<Play className="h-2.5 w-2.5" />

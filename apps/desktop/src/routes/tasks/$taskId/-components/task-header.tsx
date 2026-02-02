@@ -60,15 +60,20 @@ export function TaskHeader({
 		navigate({
 			to: "/workflow/$taskId",
 			params: { taskId: task.id },
-			search: { step, service, model, sessionId: undefined },
+			search: { step, service, model, sessionId: undefined, startNew: true },
 		});
 	}
 
-	function handleContinueSession(step: WorkflowStep, sessionId: string) {
+	function handleContinueSession(
+		step: WorkflowStep,
+		sessionId: string,
+		service: ServiceKey,
+		model: ModelKey,
+	) {
 		navigate({
 			to: "/workflow/$taskId",
 			params: { taskId: task.id },
-			search: { step, model: "opus-4.5", sessionId },
+			search: { step, service, model, sessionId },
 		});
 	}
 
@@ -81,7 +86,6 @@ export function TaskHeader({
 		setHistoryStep(step);
 		try {
 			const sessions = await utils.ai.sessions.listByScope.fetch({
-				service: "claude",
 				scope: {
 					projectId: task.project_id,
 					label: `${step}:${task.id}`,
@@ -152,8 +156,8 @@ export function TaskHeader({
 								handleWorkflowStep(step.key, service, model)
 							}
 							onViewEdit={() => handleViewEdit(step.key)}
-							onContinueLastSession={(sessionId) =>
-								handleContinueSession(step.key, sessionId)
+							onContinueLastSession={(sessionId, service, model) =>
+								handleContinueSession(step.key, sessionId, service, model)
 							}
 							onShowHistory={() => handleShowHistory(step.key)}
 						/>
@@ -174,9 +178,9 @@ export function TaskHeader({
 				onClose={() => setHistoryOpen(false)}
 				sessions={historySessions}
 				step={historyStep}
-				onSelectSession={(sessionId) => {
+				onSelectSession={(sessionId, service, model) => {
 					setHistoryOpen(false);
-					handleContinueSession(historyStep, sessionId);
+					handleContinueSession(historyStep, sessionId, service, model);
 				}}
 			/>
 		</div>

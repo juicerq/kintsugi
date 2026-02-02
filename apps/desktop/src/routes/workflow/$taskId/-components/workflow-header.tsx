@@ -3,7 +3,7 @@ import { ArrowLeft, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Title } from "@/components/ui/title";
 import { workflowSteps } from "@/lib/consts";
-import type { ModelKey, WorkflowStep } from "@/lib/types";
+import type { ModelKey, ServiceKey, WorkflowStep } from "@/lib/types";
 
 const stepMeta = Object.fromEntries(
 	workflowSteps.map((s) => [
@@ -22,6 +22,7 @@ const stepMeta = Object.fromEntries(
 interface WorkflowHeaderProps {
 	taskId: string;
 	taskTitle: string;
+	service: ServiceKey;
 	model: ModelKey;
 	step: WorkflowStep;
 	hasSession: boolean;
@@ -31,6 +32,7 @@ interface WorkflowHeaderProps {
 export function WorkflowHeader({
 	taskId,
 	taskTitle,
+	service,
 	model,
 	step,
 	hasSession,
@@ -54,6 +56,10 @@ export function WorkflowHeader({
 					{taskTitle}
 				</Title>
 			</div>
+
+			<Badge variant="default" className="py-1 px-2">
+				{service}
+			</Badge>
 
 			<Badge variant="default" className="py-1 px-2">
 				{model}

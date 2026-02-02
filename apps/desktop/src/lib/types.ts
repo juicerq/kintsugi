@@ -29,8 +29,10 @@ export type SidebarTask = SidebarProject["tasks"][number];
 /** AI session summary returned by listByScope */
 export type SessionSummary = {
 	id: string;
+	service: string;
 	title: string | null;
 	model: string | null;
+	model_key: string | null;
 	created_at: string;
 	status: string | null;
 	stop_requested: number;

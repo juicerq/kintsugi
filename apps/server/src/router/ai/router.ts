@@ -66,7 +66,7 @@ const schemas = {
 		metadata: metadataSchema,
 	}),
 	listByScope: z.object({
-		service: serviceSchema,
+		service: serviceSchema.optional(),
 		scope: scopeSchema.required({ label: true }),
 		limit: z.number().int().positive().optional(),
 	}),

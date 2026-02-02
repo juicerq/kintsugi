@@ -32,6 +32,7 @@ interface UseWorkflowSessionOptions {
 	service: ServiceKey;
 	model: ModelKey;
 	routeSessionId?: string;
+	startNew?: boolean;
 }
 
 interface UseWorkflowSessionReturn {
@@ -84,6 +85,7 @@ export function useWorkflowSession({
 	service,
 	model,
 	routeSessionId,
+	startNew,
 }: UseWorkflowSessionOptions): UseWorkflowSessionReturn {
 	const [sessionId, setSessionId] = useState<string | null>(null);
 	const [initializedScope, setInitializedScope] = useState<string | null>(null);
@@ -172,6 +174,11 @@ export function useWorkflowSession({
 			return;
 		}
 
+		if (startNew) {
+			void startNewSession();
+			return;
+		}
+
 		void checkExistingSessions();
 	}, [
 		checkExistingSessions,
@@ -180,6 +187,8 @@ export function useWorkflowSession({
 		project,
 		routeSessionId,
 		scopeKey,
+		startNew,
+		startNewSession,
 		task,
 	]);
 

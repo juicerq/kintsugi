@@ -17,6 +17,7 @@ import {
 	serviceOptions,
 	type workflowSteps,
 } from "@/lib/consts";
+import { resolveModelKey } from "@/lib/model-keys";
 import type { ModelKey, ServiceKey, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { trpc } from "../../../../trpc";
@@ -27,7 +28,11 @@ interface WorkflowStepButtonProps {
 	task: Task;
 	onSelect: (service: ServiceKey, model: ModelKey) => void;
 	onViewEdit: () => void;
-	onContinueLastSession: (sessionId: string) => void;
+	onContinueLastSession: (
+		sessionId: string,
+		service: ServiceKey,
+		model: ModelKey,
+	) => void;
 	onShowHistory: () => void;
 }
 
@@ -43,7 +48,6 @@ export function WorkflowStepButton({
 	const [open, setOpen] = useState(false);
 
 	const { data: sessions } = trpc.ai.sessions.listByScope.useQuery({
-		service: "claude",
 		scope: {
 			projectId: task.project_id,
 			label: `${step.key}:${task.id}`,
@@ -86,7 +90,11 @@ export function WorkflowStepButton({
 							className="gap-2 text-xs text-emerald-400 focus:text-emerald-300"
 							onClick={() => {
 								setOpen(false);
-								onContinueLastSession(lastSession.id);
+								onContinueLastSession(
+									lastSession.id,
+									lastSession.service as ServiceKey,
+									resolveModelKey(lastSession.model_key) ?? "opus-4.5",
+								);
 							}}
 						>
 							<Play className="h-3 w-3" />

@@ -20,13 +20,26 @@ export const Route = createFileRoute("/workflow/$taskId")({
 		service: z.enum(serviceKeys).default(defaultServiceKey),
 		model: z.enum(modelKeys).default(defaultModelKey),
 		sessionId: z.string().optional(),
+		startNew: z
+			.preprocess((value) => {
+				if (value === "true") return true;
+				if (value === "false") return false;
+				return value;
+			}, z.boolean().optional())
+			.optional(),
 	}),
 	component: WorkflowPage,
 });
 
 function WorkflowPage() {
 	const { taskId } = Route.useParams();
-	const { step, service, model, sessionId: routeSessionId } = Route.useSearch();
+	const {
+		step,
+		service,
+		model,
+		sessionId: routeSessionId,
+		startNew,
+	} = Route.useSearch();
 
 	const [task] = trpc.tasks.get.useSuspenseQuery({ id: taskId });
 	const [projects] = trpc.projects.list.useSuspenseQuery();
@@ -46,6 +59,7 @@ function WorkflowPage() {
 			task={task}
 			project={project}
 			routeSessionId={routeSessionId}
+			startNew={startNew}
 		>
 			<div className="flex flex-col h-full">
 				<WorkflowSession.Header />

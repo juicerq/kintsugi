@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { type ModelKey, modelsMap } from "../ai/models";
+import { type ModelKey, modelsMap, resolveModelKey } from "../ai/models";
 import { servicesMap } from "../ai/services";
 import type {
 	AiServiceName,
@@ -109,7 +109,7 @@ type SendMessageParams = {
 };
 
 type ListByScopeParams = {
-	service: AiServiceName;
+	service?: AiServiceName;
 	scope: AiSessionScope & { projectId: string; label: string };
 	limit?: number;
 };
@@ -201,13 +201,21 @@ export namespace AiService {
 	const sessionsRepo = createAiSessionsRepository(db);
 
 	export async function listByScope(params: ListByScopeParams) {
-		return sessionsRepo.listWithMessageStats({
-			service: params.service,
+		const sessions = await sessionsRepo.listWithMessageStats({
+			...(params.service && { service: params.service }),
 			scope: {
 				scope_project_id: params.scope.projectId,
 				scope_label: params.scope.label,
 			},
 			limit: params.limit,
 		});
+
+		return sessions.map((session) => ({
+			...session,
+			model_key: resolveModelKey({
+				modelId: session.model,
+				service: session.service as AiServiceName,
+			}),
+		}));
 	}
 }
